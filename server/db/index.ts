@@ -45,13 +45,16 @@ class DatabaseEngine {
   }
 
   private seed() {
-    const defaultPasswordHash = bcrypt.hashSync('password123', 10);
+    const ownerName = process.env.OWNER_NAME?.replace(/"/g, '') || 'Micheal';
+    const ownerEmail = process.env.OWNER_EMAIL?.replace(/"/g, '') || 'micheal@gateway.local';
+    const ownerPassword = process.env.OWNER_PASSWORD?.replace(/"/g, '') || 'password123';
+    const defaultPasswordHash = bcrypt.hashSync(ownerPassword, 10);
     const now = new Date().toISOString();
 
     const owner: UserRecord = {
       id: 'user_micheal',
-      name: 'Micheal',
-      email: 'micheal@gateway.local',
+      name: ownerName,
+      email: ownerEmail,
       passwordHash: defaultPasswordHash,
       role: 'owner',
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
