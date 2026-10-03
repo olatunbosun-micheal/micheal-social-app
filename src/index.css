@@ -1663,6 +1663,38 @@ input, textarea {
   color: var(--text-secondary);
 }
 
+.form-input {
+  width: 100%;
+  background: var(--bg-app);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  color: var(--text-primary);
+  font-size: 13.5px;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form-input:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
+}
+
+.form-input::placeholder {
+  color: var(--text-muted);
+}
+
+select.form-input {
+  cursor: pointer;
+  appearance: auto;
+}
+
+select.form-input option {
+  background-color: var(--bg-modal);
+  color: var(--text-primary);
+}
+
 .submit-btn {
   background: var(--accent-primary);
   color: #fff;

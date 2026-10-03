@@ -23,38 +23,15 @@ export const App: React.FC = () => {
   // Theme state
   const [theme, setTheme] = useState<ThemeMode>('dark');
 
-  // Multi-user & isolation state
-  const [isLiveDbMode, setIsLiveDbMode] = useState<boolean>(false);
+  // Multi-user & isolation state (Live Production by Default)
+  const [isLiveDbMode, setIsLiveDbMode] = useState<boolean>(true);
   const [currentUser, setCurrentUser] = useState<User | null>(OWNER_USER);
-  const [guestUsers, setGuestUsers] = useState<Record<string, User>>(GUEST_USERS);
-  const [conversations, setConversations] = useState<Conversation[]>(INITIAL_CONVERSATIONS);
-  const [messages, setMessages] = useState<Record<string, Message[]>>(INITIAL_MESSAGES);
+  const [guestUsers, setGuestUsers] = useState<Record<string, User>>({});
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [messages, setMessages] = useState<Record<string, Message[]>>({});
 
   // Invitation state
-  const [invites, setInvites] = useState<InviteData[]>([
-    {
-      id: 'inv_vip_sarah',
-      code: 'A8K29Lm',
-      recipientName: 'Sarah',
-      note: 'Direct VIP invitation link for design collaboration',
-      maxUses: 1,
-      usedCount: 1,
-      isRevoked: false,
-      expiresAt: null,
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 'inv_gen_open',
-      code: 'OPEN99X',
-      recipientName: undefined,
-      note: 'General multi-use link',
-      maxUses: 0,
-      usedCount: 2,
-      isRevoked: false,
-      expiresAt: null,
-      createdAt: new Date().toISOString(),
-    },
-  ]);
+  const [invites, setInvites] = useState<InviteData[]>([]);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [activeInviteCode, setActiveInviteCode] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
@@ -71,7 +48,7 @@ export const App: React.FC = () => {
   });
 
   // Active chat selection
-  const [activeConversationId, setActiveConversationId] = useState<string>('conv_sarah');
+  const [activeConversationId, setActiveConversationId] = useState<string>('');
 
   // UI States
   const [replyTo, setReplyTo] = useState<ReplyContext | null>(null);
@@ -79,7 +56,7 @@ export const App: React.FC = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [lightboxCaption, setLightboxCaption] = useState<string | undefined>(undefined);
-  const [isAutoResponderEnabled, setIsAutoResponderEnabled] = useState<boolean>(true);
+  const [isAutoResponderEnabled, setIsAutoResponderEnabled] = useState<boolean>(false);
 
   // Ephemeral Typing Indicators
   const [typingUsers, setTypingUsers] = useState<Record<string, boolean>>({});
