@@ -47,6 +47,14 @@ class RealtimeClient {
           const parsed = JSON.parse(event.data);
           this.emit(parsed.event, parsed.data);
 
+          // If session is revoked by the owner, immediately terminate session
+          if (parsed.event === 'session.revoked') {
+            localStorage.removeItem('gateway_token');
+            alert(parsed.data?.reason || 'Your access has been revoked by the owner.');
+            window.location.href = '/';
+            return;
+          }
+
           // Handle notifications
           if (parsed.event === 'message.created') {
             soundFX.playReceive();
@@ -57,7 +65,12 @@ class RealtimeClient {
         }
       };
 
-      this.socket.onclose = () => {
+      this.socket.onclose = (event) => {
+        if (event.code === 4003) {
+          localStorage.removeItem('gateway_token');
+          window.location.href = '/';
+          return;
+        }
         console.log('[Realtime] WebSocket closed. Reconnecting in 3s...');
         clearTimeout(this.reconnectTimer);
         this.reconnectTimer = setTimeout(() => this.connect(), 3000);

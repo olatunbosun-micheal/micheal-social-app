@@ -187,3 +187,25 @@ const broadcastPresence = (userId: string, isOnline: boolean) => {
     });
   });
 };
+
+export const revokeUserSessions = (userId: string, reason = 'Invitation revoked by owner'): void => {
+  const sockets = userSockets.get(userId);
+  if (sockets) {
+    const payload = JSON.stringify({
+      event: 'session.revoked',
+      data: { reason },
+    });
+    sockets.forEach((s) => {
+      try {
+        if (s.readyState === WebSocket.OPEN) {
+          s.send(payload);
+          s.close(4003, reason);
+        }
+      } catch (e) {
+        console.warn('Error closing revoked socket:', e);
+      }
+    });
+    userSockets.delete(userId);
+  }
+};
+

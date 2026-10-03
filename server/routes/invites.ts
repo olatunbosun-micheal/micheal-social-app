@@ -4,6 +4,7 @@ import { inviteService } from '../services/inviteService.js';
 import { authenticateJWT, AuthenticatedRequest } from '../middleware/auth.js';
 import { assertOwner } from '../middleware/authorization.js';
 import { db } from '../db/index.js';
+import { revokeUserSessions } from '../realtime/websocket.js';
 
 const router = Router();
 
@@ -49,12 +50,23 @@ router.get('/validate/:code', (req, res: Response) => {
 // Revoke Invitation (Owner Only)
 router.delete('/:id', authenticateJWT, assertOwner, (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
-  const updated = db.updateInvite(id, { isRevoked: true });
-  if (!updated) {
+  const invite = db.findInviteById(id);
+  if (!invite) {
     res.status(404).json({ error: 'Invite not found.' });
     return;
   }
-  res.json({ success: true, message: 'Invitation revoked.' });
+
+  db.updateInvite(id, { isRevoked: true });
+
+  // Cancel invited users' sessions immediately
+  if (invite.usedByUserIds && invite.usedByUserIds.length > 0) {
+    for (const userId of invite.usedByUserIds) {
+      db.updateUser(userId, { isBlocked: true, isOnline: false, lastSeen: new Date().toISOString() });
+      revokeUserSessions(userId, 'Your invitation has been revoked by the owner.');
+    }
+  }
+
+  res.json({ success: true, message: 'Invitation revoked and invited user sessions terminated.' });
 });
 
 export default router;

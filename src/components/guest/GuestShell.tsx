@@ -57,6 +57,10 @@ export const GuestShell: React.FC<GuestShellProps> = ({
       const res = await fetch(`${API_BASE}/conversations`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      if (res.status === 401 || res.status === 403) {
+        onLogout();
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         if (data.conversations && data.conversations.length > 0) {
@@ -73,6 +77,10 @@ export const GuestShell: React.FC<GuestShellProps> = ({
           const msgRes = await fetch(`${API_BASE}/conversations/${conv.id}/messages`, {
             headers: { Authorization: `Bearer ${token}` },
           });
+          if (msgRes.status === 401 || msgRes.status === 403) {
+            onLogout();
+            return;
+          }
           if (msgRes.ok) {
             const msgData = await msgRes.json();
             setMessages(msgData.messages || []);
@@ -216,6 +224,11 @@ export const GuestShell: React.FC<GuestShellProps> = ({
             replyToId: replyTo?.id,
           }),
         });
+
+        if (res.status === 401 || res.status === 403) {
+          onLogout();
+          return;
+        }
 
         if (res.ok) {
           const data = await res.json();
