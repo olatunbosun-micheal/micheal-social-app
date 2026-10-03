@@ -364,6 +364,8 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
                 onToggleDrawer={() => setIsDrawerOpen(!isDrawerOpen)}
                 showBackButton={isMobileScreen}
                 onBack={() => setMobileView('inbox')}
+                theme={theme}
+                onToggleTheme={onToggleTheme}
               />
 
               <MessageList

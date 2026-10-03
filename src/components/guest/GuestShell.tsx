@@ -234,6 +234,8 @@ export const GuestShell: React.FC<GuestShellProps> = ({
           isTyping={isOwnerTyping}
           onToggleDrawer={() => setIsDrawerOpen(!isDrawerOpen)}
           showBackButton={false}
+          theme={theme}
+          onToggleTheme={onToggleTheme}
         />
 
         {/* Message Stream */}

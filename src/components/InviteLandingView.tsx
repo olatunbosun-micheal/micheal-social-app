@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowRight, Lock, Mail, User as UserIcon, Shield, AlertTriangle } from 'lucide-react';
-import type { User } from '../types';
+import { ArrowRight, Lock, Mail, User as UserIcon, Shield, AlertTriangle, Moon, Sun, Sparkles } from 'lucide-react';
+import type { User, ThemeMode } from '../types';
 import { API_BASE } from '../config';
 
 interface InviteLandingViewProps {
   inviteCode: string;
+  theme?: ThemeMode;
+  onToggleTheme?: () => void;
   onSuccess: (user: User, conversationId: string) => void;
   onGoHome: () => void;
 }
 
 export const InviteLandingView: React.FC<InviteLandingViewProps> = ({
   inviteCode,
+  theme = 'dark',
+  onToggleTheme,
   onSuccess,
   onGoHome,
 }) => {
@@ -120,9 +124,22 @@ export const InviteLandingView: React.FC<InviteLandingViewProps> = ({
     return (
       <div className="land-screen">
         <div className="land-panel">
-          <div className="land-logo-row">
-            <div className="land-logo-mark"><Shield size={16} strokeWidth={2} /></div>
-            <span className="land-logo-name">Gateway</span>
+          <div className="land-logo-row" style={{ justifyContent: 'space-between', width: '100%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div className="land-logo-mark"><Shield size={16} strokeWidth={2} /></div>
+              <span className="land-logo-name">Gateway</span>
+            </div>
+            {onToggleTheme && (
+              <button
+                type="button"
+                className="land-theme-toggle-btn"
+                onClick={onToggleTheme}
+                title={`Theme: ${theme.toUpperCase()} — Click to cycle color theme`}
+              >
+                {theme === 'light' ? <Sun size={13} strokeWidth={2} /> : theme === 'midnight' ? <Sparkles size={13} strokeWidth={2} /> : <Moon size={13} strokeWidth={2} />}
+                <span>{theme}</span>
+              </button>
+            )}
           </div>
 
           <div className="land-invite-tag">Personal invitation</div>

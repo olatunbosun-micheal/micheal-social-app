@@ -1,16 +1,20 @@
 import React, { useState } from 'react';
-import { ArrowRight, Lock, Mail, Shield, MessageSquare, Key, ShieldCheck, Check } from 'lucide-react';
-import type { User } from '../types';
+import { ArrowRight, Lock, Mail, Shield, MessageSquare, Key, ShieldCheck, Check, Moon, Sun, Sparkles } from 'lucide-react';
+import type { User, ThemeMode } from '../types';
 import { API_BASE } from '../config';
 
 interface LandingPageViewProps {
   ownerName: string;
+  theme?: ThemeMode;
+  onToggleTheme?: () => void;
   onLoginSuccess: (user: User) => void;
-  onOpenInvitePrompt: () => void;
+  onOpenInvitePrompt?: () => void;
 }
 
 export const LandingPageView: React.FC<LandingPageViewProps> = ({
   ownerName,
+  theme = 'dark',
+  onToggleTheme,
   onLoginSuccess,
 }) => {
   const [tab, setTab] = useState<'signin' | 'invite'>('signin');
@@ -73,9 +77,29 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
             </div>
           </div>
 
-          <div className="land-status-badge">
-            <span className="land-status-dot" />
-            <span>DIRECT NETWORK ACTIVE</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {onToggleTheme && (
+              <button
+                type="button"
+                className="land-theme-toggle-btn"
+                onClick={onToggleTheme}
+                title={`Current Theme: ${theme.toUpperCase()} — Click to cycle color theme`}
+              >
+                {theme === 'light' ? (
+                  <Sun size={13} strokeWidth={2} />
+                ) : theme === 'midnight' ? (
+                  <Sparkles size={13} strokeWidth={2} />
+                ) : (
+                  <Moon size={13} strokeWidth={2} />
+                )}
+                <span>{theme === 'midnight' ? 'Midnight' : theme === 'light' ? 'Light' : 'Obsidian'}</span>
+              </button>
+            )}
+
+            <div className="land-status-badge">
+              <span className="land-status-dot" />
+              <span>DIRECT NETWORK ACTIVE</span>
+            </div>
           </div>
         </header>
 

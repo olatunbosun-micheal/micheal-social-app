@@ -1,6 +1,6 @@
 import React from 'react';
 import type { User } from '../types';
-import { Phone, Video, Search, MoreVertical, ArrowLeft, Shield } from 'lucide-react';
+import { Phone, Video, Search, MoreVertical, ArrowLeft, Shield, Moon, Sun, Sparkles } from 'lucide-react';
 
 interface ChatHeaderProps {
   contactUser: User;
@@ -8,6 +8,8 @@ interface ChatHeaderProps {
   onToggleDrawer: () => void;
   onBack?: () => void;
   showBackButton?: boolean;
+  theme?: string;
+  onToggleTheme?: () => void;
 }
 
 export const ChatHeader: React.FC<ChatHeaderProps> = ({
@@ -16,6 +18,8 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   onToggleDrawer,
   onBack,
   showBackButton = false,
+  theme,
+  onToggleTheme,
 }) => {
   return (
     <div className="chat-header">
@@ -78,6 +82,22 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         >
           <Search size={19} />
         </button>
+
+        {onToggleTheme && (
+          <button
+            className="icon-action-btn"
+            onClick={onToggleTheme}
+            title={`Current Theme: ${theme?.toUpperCase() || 'DARK'} — Click to change color theme`}
+          >
+            {theme === 'light' ? (
+              <Sun size={17} />
+            ) : theme === 'midnight' ? (
+              <Sparkles size={17} />
+            ) : (
+              <Moon size={17} />
+            )}
+          </button>
+        )}
 
         <button
           className="icon-action-btn"

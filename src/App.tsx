@@ -88,6 +88,8 @@ export const App: React.FC = () => {
     return (
       <InviteLandingView
         inviteCode={activeInviteCode}
+        theme={theme}
+        onToggleTheme={toggleTheme}
         onSuccess={(user) => {
           setCurrentUser(user);
           setActiveInviteCode(null);
@@ -129,6 +131,8 @@ export const App: React.FC = () => {
   return (
     <LandingPageView
       ownerName="Micheal"
+      theme={theme}
+      onToggleTheme={toggleTheme}
       onLoginSuccess={(user) => {
         setCurrentUser(user);
       }}
