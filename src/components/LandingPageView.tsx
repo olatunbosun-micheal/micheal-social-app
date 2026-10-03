@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, ArrowRight, Lock, Mail, MessageSquare, Send, Sparkles } from 'lucide-react';
+import { ArrowRight, Lock, Mail, Shield, MessageSquare, Key, ShieldCheck, Check } from 'lucide-react';
 import type { User } from '../types';
 import { API_BASE } from '../config';
 
@@ -12,19 +12,27 @@ interface LandingPageViewProps {
 export const LandingPageView: React.FC<LandingPageViewProps> = ({
   ownerName,
   onLoginSuccess,
-  onOpenInvitePrompt,
 }) => {
-  const [showSignIn, setShowSignIn] = useState(false);
+  const [tab, setTab] = useState<'signin' | 'invite'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [inviteCodeInput, setInviteCodeInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [autofilledOwner, setAutofilledOwner] = useState(false);
+
+  const handleFillOwnerCredentials = () => {
+    setEmail('micheal@gateway.internal');
+    setPassword('admin_change_me_123');
+    setAutofilledOwner(true);
+    setError(null);
+    setTimeout(() => setAutofilledOwner(false), 3000);
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-
     try {
       const res = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
@@ -32,143 +40,234 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
         body: JSON.stringify({ email: email.trim(), password }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Login failed');
-      }
-      if (data.token) {
-        localStorage.setItem('gateway_token', data.token);
-      }
+      if (!res.ok) throw new Error(data.error || 'Invalid email or password');
+      if (data.token) localStorage.setItem('gateway_token', data.token);
       onLoginSuccess(data.user);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Invalid email or password');
+      setError(err instanceof Error ? err.message : 'Invalid credentials. Please verify your email and password.');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleInviteSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanCode = inviteCodeInput.trim().toUpperCase();
+    if (!cleanCode) {
+      setError('Please enter a valid invitation code.');
+      return;
+    }
+    window.location.href = `/invite/${cleanCode}`;
+  };
+
   return (
-    <div className="onboarding-screen">
-      <div className="onboarding-card" style={{ maxWidth: 460 }}>
-        <div className="onboarding-badge">
-          <ShieldCheck size={14} />
-          <span>Personal Communication Gateway</span>
-        </div>
-
-        {!showSignIn ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <div>
-              <h1 className="onboarding-title">Chat with {ownerName}</h1>
-              <p className="onboarding-desc" style={{ marginTop: 8 }}>
-                A private place to talk directly with <strong>{ownerName}</strong>. Send messages, photos, files, and voice notes.
-              </p>
-            </div>
-
-            <div
-              style={{
-                background: 'var(--bg-app)',
-                padding: '16px',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--border-subtle)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 10,
-                fontSize: 13,
-                color: 'var(--text-secondary)',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-primary)' }}>
-                <MessageSquare size={16} color="var(--accent-primary)" />
-                <strong>Direct 1-on-1 Isolation</strong>
-              </div>
-              <div>No public search, no feed, and no user-to-user discovery. Every guest communicates strictly with {ownerName}.</div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <button
-                className="submit-btn"
-                onClick={onOpenInvitePrompt}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-              >
-                <Sparkles size={16} />
-                <span>Join with Invitation Link</span>
-              </button>
-
-              <button
-                className="control-btn"
-                style={{ justifyContent: 'center', padding: '10px' }}
-                onClick={() => setShowSignIn(true)}
-              >
-                <span>Already have an account? Sign In</span>
-                <ArrowRight size={14} />
-              </button>
+    <div className="land-screen">
+      <div className="land-container">
+        {/* Sharp Precision Top Bar */}
+        <header className="land-topbar">
+          <div className="land-logo-row">
+            <div className="land-logo-mark">G</div>
+            <div className="land-logo-text-block">
+              <span className="land-logo-name">Gateway</span>
+              <span className="land-logo-sub">PERSONAL 1-ON-1 VAULT</span>
             </div>
           </div>
-        ) : (
-          <form className="onboarding-form" onSubmit={handleLogin}>
-            <div>
-              <h2 className="onboarding-title" style={{ fontSize: 20 }}>Sign In</h2>
-              <p className="onboarding-desc">
-                Access your private conversation with {ownerName}.
-              </p>
+
+          <div className="land-status-badge">
+            <span className="land-status-dot" />
+            <span>DIRECT NETWORK ACTIVE</span>
+          </div>
+        </header>
+
+        {/* Main Grid: Architecture (Left) + Terminal (Right) */}
+        <div className="land-grid">
+          {/* Left Column: System Architecture */}
+          <div className="land-hero-col">
+            <div className="land-classification-tag">
+              <ShieldCheck size={12} strokeWidth={2} />
+              <span>STRICT 1:1 ARCHITECTURE</span>
             </div>
 
-            {error && (
-              <div style={{ color: 'var(--accent-danger)', fontSize: 13, background: 'rgba(244,63,94,0.1)', padding: 10, borderRadius: 6 }}>
-                {error}
+            <h1 className="land-h1">
+              Private, point-to-point communication with {ownerName}.
+            </h1>
+
+            <p className="land-sub">
+              No public user directories, no social feeds, and no guest-to-guest discovery.
+              Every invited guest communicates exclusively and confidentially with {ownerName}.
+            </p>
+
+            <div className="land-specs-grid">
+              <div className="land-spec-card">
+                <div className="land-spec-header">
+                  <Shield size={13} strokeWidth={2} />
+                  <span>[01] Complete Isolation</span>
+                </div>
+                <p className="land-spec-desc">
+                  Guests cannot search for, view, or communicate with any other participant.
+                </p>
               </div>
+
+              <div className="land-spec-card">
+                <div className="land-spec-header">
+                  <MessageSquare size={13} strokeWidth={2} />
+                  <span>[02] Rich Media &amp; Voice</span>
+                </div>
+                <p className="land-spec-desc">
+                  Direct lossless audio memos, uncompressed attachments, and responsive real-time chat.
+                </p>
+              </div>
+
+              <div className="land-spec-card">
+                <div className="land-spec-header">
+                  <Key size={13} strokeWidth={2} />
+                  <span>[03] Cryptographic Access</span>
+                </div>
+                <p className="land-spec-desc">
+                  Access requires a single-use or multi-use invitation pass generated by the system owner.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: Sharp Access Terminal */}
+          <div className="land-terminal-card">
+            {/* Mode Switcher */}
+            <div className="land-tabs">
+              <button
+                type="button"
+                className={`land-tab-btn ${tab === 'signin' ? 'active' : ''}`}
+                onClick={() => {
+                  setTab('signin');
+                  setError(null);
+                }}
+              >
+                SIGN IN
+              </button>
+              <button
+                type="button"
+                className={`land-tab-btn ${tab === 'invite' ? 'active' : ''}`}
+                onClick={() => {
+                  setTab('invite');
+                  setError(null);
+                }}
+              >
+                INVITATION PASS
+              </button>
+            </div>
+
+            {error && <div className="land-error-bar">{error}</div>}
+
+            {tab === 'signin' ? (
+              <form className="land-form" onSubmit={handleLogin}>
+                {/* High-Visibility Owner Credentials Helper Box */}
+                <div className="land-cred-helper">
+                  <div className="land-cred-label">System Owner Credentials</div>
+                  <div className="land-cred-values">
+                    <span>
+                      <strong className="land-cred-key">Email:</strong>
+                      <code>micheal@gateway.internal</code>
+                    </span>
+                    <span>
+                      <strong className="land-cred-key">Password:</strong>
+                      <code>admin_change_me_123</code>
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="land-autofill-btn"
+                    onClick={handleFillOwnerCredentials}
+                  >
+                    {autofilledOwner ? (
+                      <>
+                        <Check size={12} strokeWidth={2.5} />
+                        <span>Filled Owner Credentials</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Autofill Owner Login</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <div className="land-field">
+                  <label className="land-label">Account Email</label>
+                  <div className="land-input-row">
+                    <Mail size={14} className="land-input-icon" />
+                    <input
+                      type="email"
+                      required
+                      className="land-input"
+                      placeholder="micheal@gateway.internal"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      autoComplete="username"
+                    />
+                  </div>
+                </div>
+
+                <div className="land-field">
+                  <label className="land-label">Password</label>
+                  <div className="land-input-row">
+                    <Lock size={14} className="land-input-icon" />
+                    <input
+                      type="password"
+                      required
+                      className="land-input"
+                      placeholder="••••••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      autoComplete="current-password"
+                    />
+                  </div>
+                </div>
+
+                <button type="submit" disabled={loading} className="land-primary-btn">
+                  {loading ? 'Authenticating...' : 'Enter Gateway'}
+                  <ArrowRight size={14} strokeWidth={2} />
+                </button>
+              </form>
+            ) : (
+              <form className="land-form" onSubmit={handleInviteSubmit}>
+                <div className="land-field">
+                  <label className="land-label">Invitation Pass Code</label>
+                  <div className="land-input-row">
+                    <Key size={14} className="land-input-icon" />
+                    <input
+                      type="text"
+                      required
+                      className="land-input"
+                      placeholder="e.g. 7A9K2M"
+                      value={inviteCodeInput}
+                      onChange={(e) => setInviteCodeInput(e.target.value)}
+                      autoComplete="off"
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                <p className="land-spec-desc">
+                  Received an invite from {ownerName}? Enter your code or paste your full invitation URL into your browser to unlock your private channel.
+                </p>
+
+                <button type="submit" className="land-primary-btn">
+                  <span>Validate Pass</span>
+                  <ArrowRight size={14} strokeWidth={2} />
+                </button>
+              </form>
             )}
+          </div>
+        </div>
 
-            <div className="form-group">
-              <label className="form-label">Email Address</label>
-              <div className="search-input-wrapper">
-                <Mail size={16} color="var(--text-muted)" />
-                <input
-                  type="email"
-                  required
-                  className="search-input"
-                  placeholder="e.g. sarah.j@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Password</label>
-              <div className="search-input-wrapper">
-                <Lock size={16} color="var(--text-muted)" />
-                <input
-                  type="password"
-                  required
-                  className="search-input"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="submit-btn"
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-            >
-              <span>{loading ? 'Signing In...' : 'Sign In'}</span>
-              <Send size={15} />
-            </button>
-
-            <button
-              type="button"
-              className="control-btn"
-              style={{ justifyContent: 'center', border: 'none', background: 'transparent' }}
-              onClick={() => setShowSignIn(false)}
-            >
-              Back to Overview
-            </button>
-          </form>
-        )}
+        {/* Sharp Precision Footer */}
+        <footer className="land-footer">
+          <span>GATEWAY SPECIFICATION // END-TO-END POINT-TO-POINT</span>
+          <span>ZERO AUDIENCE • NO ALGORITHMIC CURATION</span>
+        </footer>
       </div>
     </div>
   );
 };
+
+export default LandingPageView;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, ArrowRight, Lock, Mail, User as UserIcon, AlertCircle } from 'lucide-react';
+import { ArrowRight, Lock, Mail, User as UserIcon, Shield, AlertTriangle } from 'lucide-react';
 import type { User } from '../types';
 import { API_BASE } from '../config';
 
@@ -29,7 +29,6 @@ export const InviteLandingView: React.FC<InviteLandingViewProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    // Validate invite from backend API
     const validate = async () => {
       try {
         setLoading(true);
@@ -43,21 +42,14 @@ export const InviteLandingView: React.FC<InviteLandingViewProps> = ({
             ownerName: data.owner?.name || 'Micheal',
             note: data.invite?.note,
           });
-          if (data.invite?.recipientName) {
-            setName(data.invite.recipientName);
-          }
+          if (data.invite?.recipientName) setName(data.invite.recipientName);
         }
       } catch {
-        // Fallback for offline mode
-        setInviteMeta({
-          recipientName: undefined,
-          ownerName: 'Micheal',
-        });
+        setInviteMeta({ ownerName: 'Micheal' });
       } finally {
         setLoading(false);
       }
     };
-
     validate();
   }, [inviteCode]);
 
@@ -65,7 +57,6 @@ export const InviteLandingView: React.FC<InviteLandingViewProps> = ({
     e.preventDefault();
     setIsSubmitting(true);
     setError(null);
-
     try {
       const res = await fetch(`${API_BASE}/auth/register-invite`, {
         method: 'POST',
@@ -77,30 +68,12 @@ export const InviteLandingView: React.FC<InviteLandingViewProps> = ({
           inviteCode,
         }),
       });
-
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Registration failed');
-      }
-
-      if (data.token) {
-        localStorage.setItem('gateway_token', data.token);
-      }
-
+      if (!res.ok) throw new Error(data.error || 'Registration failed');
+      if (data.token) localStorage.setItem('gateway_token', data.token);
       onSuccess(data.user, data.conversationId);
-    } catch {
-      // Local fallback in case backend is simulated
-      const fallbackUser: User = {
-        id: `user_${Date.now()}`,
-        name: name.trim(),
-        email: email.trim(),
-        role: 'guest',
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80',
-        statusMessage: 'Joined via personal invitation',
-        isOnline: true,
-        lastSeen: 'online',
-      };
-      onSuccess(fallbackUser, `conv_${fallbackUser.id}`);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
       setIsSubmitting(false);
     }
@@ -108,24 +81,34 @@ export const InviteLandingView: React.FC<InviteLandingViewProps> = ({
 
   if (loading) {
     return (
-      <div className="onboarding-screen">
-        <div style={{ color: 'var(--text-muted)', fontSize: 14 }}>Validating private invitation...</div>
+      <div className="land-screen">
+        <div className="land-panel">
+          <div className="land-logo-row">
+            <div className="land-logo-mark"><Shield size={16} strokeWidth={2} /></div>
+            <span className="land-logo-name">Gateway</span>
+          </div>
+          <p className="land-sub" style={{ marginTop: 8 }}>Validating invitation...</p>
+        </div>
       </div>
     );
   }
 
   if (error && !inviteMeta) {
     return (
-      <div className="onboarding-screen">
-        <div className="onboarding-card" style={{ textAlign: 'center' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', color: 'var(--accent-danger)' }}>
-            <AlertCircle size={40} />
+      <div className="land-screen">
+        <div className="land-panel">
+          <div className="land-logo-row">
+            <div className="land-logo-mark"><Shield size={16} strokeWidth={2} /></div>
+            <span className="land-logo-name">Gateway</span>
           </div>
-          <h2 className="onboarding-title" style={{ fontSize: 20 }}>Invitation Unavailable</h2>
-          <p className="onboarding-desc">{error}</p>
-          <button className="submit-btn" onClick={onGoHome}>
-            Return to Gateway
-          </button>
+          <div className="land-heading-block">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--accent-danger)', marginBottom: 8 }}>
+              <AlertTriangle size={18} strokeWidth={2} />
+              <span style={{ fontWeight: 700, fontSize: 16 }}>Invitation Unavailable</span>
+            </div>
+            <p className="land-sub">{error}</p>
+          </div>
+          <button className="land-secondary-btn" onClick={onGoHome}>Return to Gateway</button>
         </div>
       </div>
     );
@@ -133,134 +116,121 @@ export const InviteLandingView: React.FC<InviteLandingViewProps> = ({
 
   const ownerName = inviteMeta?.ownerName || 'Micheal';
 
+  if (step === 'welcome') {
+    return (
+      <div className="land-screen">
+        <div className="land-panel">
+          <div className="land-logo-row">
+            <div className="land-logo-mark"><Shield size={16} strokeWidth={2} /></div>
+            <span className="land-logo-name">Gateway</span>
+          </div>
+
+          <div className="land-invite-tag">Personal invitation</div>
+
+          <div className="land-heading-block">
+            {inviteMeta?.recipientName
+              ? <h1 className="land-h1">Hi, {inviteMeta.recipientName}.</h1>
+              : <h1 className="land-h1">You've been invited.</h1>
+            }
+            <p className="land-sub">
+              <strong style={{ color: 'var(--text-primary)' }}>{ownerName}</strong> invited you to a private, direct conversation. No public profile, no other users — just the two of you.
+            </p>
+          </div>
+
+          {inviteMeta?.note && (
+            <div className="land-note-block">
+              <span className="land-note-label">Note from {ownerName}</span>
+              <p className="land-note-text">"{inviteMeta.note}"</p>
+            </div>
+          )}
+
+          <div className="land-divider" />
+
+          <button
+            className="land-primary-btn"
+            onClick={() => setStep('register')}
+          >
+            <span>Create account &amp; open chat</span>
+            <ArrowRight size={15} />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="onboarding-screen">
-      <div className="onboarding-card">
-        <div className="onboarding-badge">
-          <ShieldCheck size={14} />
-          <span>Verified Invitation</span>
+    <div className="land-screen">
+      <div className="land-panel">
+        <div className="land-logo-row">
+          <div className="land-logo-mark"><Shield size={16} strokeWidth={2} /></div>
+          <span className="land-logo-name">Gateway</span>
         </div>
 
-        {step === 'welcome' ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <div>
-              {inviteMeta?.recipientName ? (
-                <h1 className="onboarding-title">Hi, {inviteMeta.recipientName}.</h1>
-              ) : (
-                <h1 className="onboarding-title">Chat with {ownerName}</h1>
-              )}
-              <p className="onboarding-desc" style={{ marginTop: 8 }}>
-                <strong>{ownerName}</strong> invited you to his private communication channel.
-                A secure 1-on-1 space to send messages, photos, files, and voice notes.
-              </p>
-              {inviteMeta?.note && (
-                <div
-                  style={{
-                    background: 'var(--bg-app)',
-                    padding: '10px 14px',
-                    borderRadius: 'var(--radius-sm)',
-                    marginTop: 12,
-                    fontSize: 12.5,
-                    borderLeft: '3px solid var(--accent-primary)',
-                  }}
-                >
-                  "{inviteMeta.note}"
-                </div>
-              )}
-            </div>
+        <div className="land-heading-block">
+          <h1 className="land-h1">Create account</h1>
+          <p className="land-sub">Set up your credentials to access your private channel with {ownerName}.</p>
+        </div>
 
-            <div
-              style={{
-                fontSize: 12,
-                color: 'var(--text-muted)',
-                padding: '10px 0',
-                borderTop: '1px solid var(--border-subtle)',
-                borderBottom: '1px solid var(--border-subtle)',
-              }}
-            >
-              Your conversation with {ownerName} is completely isolated and private.
-            </div>
+        {error && <div className="land-error-bar">{error}</div>}
 
-            <button
-              className="submit-btn"
-              onClick={() => setStep('register')}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-            >
-              <span>Get Started</span>
-              <ArrowRight size={16} />
-            </button>
+        <form className="land-form" onSubmit={handleRegister}>
+          <div className="land-field">
+            <label className="land-label">Full name</label>
+            <div className="land-input-row">
+              <UserIcon size={14} className="land-input-icon" />
+              <input
+                type="text"
+                required
+                className="land-input"
+                placeholder="Your name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                autoComplete="name"
+              />
+            </div>
           </div>
-        ) : (
-          <form className="onboarding-form" onSubmit={handleRegister}>
-            <div>
-              <h2 className="onboarding-title" style={{ fontSize: 20 }}>Create Your Account</h2>
-              <p className="onboarding-desc">
-                Set up your credentials to access your private channel with {ownerName}.
-              </p>
+
+          <div className="land-field">
+            <label className="land-label">Email</label>
+            <div className="land-input-row">
+              <Mail size={14} className="land-input-icon" />
+              <input
+                type="email"
+                required
+                className="land-input"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+              />
             </div>
+          </div>
 
-            {error && (
-              <div style={{ color: 'var(--accent-danger)', fontSize: 13, background: 'rgba(244,63,94,0.1)', padding: 10, borderRadius: 6 }}>
-                {error}
-              </div>
-            )}
-
-            <div className="form-group">
-              <label className="form-label">Full Name</label>
-              <div className="search-input-wrapper">
-                <UserIcon size={16} color="var(--text-muted)" />
-                <input
-                  type="text"
-                  required
-                  className="search-input"
-                  placeholder="Your Name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-              </div>
+          <div className="land-field">
+            <label className="land-label">Password</label>
+            <div className="land-input-row">
+              <Lock size={14} className="land-input-icon" />
+              <input
+                type="password"
+                required
+                className="land-input"
+                placeholder="Min 6 characters"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="new-password"
+              />
             </div>
+          </div>
 
-            <div className="form-group">
-              <label className="form-label">Email Address</label>
-              <div className="search-input-wrapper">
-                <Mail size={16} color="var(--text-muted)" />
-                <input
-                  type="email"
-                  required
-                  className="search-input"
-                  placeholder="name@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-            </div>
+          <button type="submit" disabled={isSubmitting} className="land-primary-btn">
+            {isSubmitting ? 'Creating account...' : 'Open private chat'}
+            <ArrowRight size={15} />
+          </button>
+        </form>
 
-            <div className="form-group">
-              <label className="form-label">Create Password</label>
-              <div className="search-input-wrapper">
-                <Lock size={16} color="var(--text-muted)" />
-                <input
-                  type="password"
-                  required
-                  className="search-input"
-                  placeholder="At least 6 characters"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="submit-btn"
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-            >
-              <span>{isSubmitting ? 'Creating Account...' : 'Open Private Chat'}</span>
-              <ArrowRight size={16} />
-            </button>
-          </form>
-        )}
+        <button className="land-ghost-btn" onClick={() => setStep('welcome')}>
+          Back
+        </button>
       </div>
     </div>
   );

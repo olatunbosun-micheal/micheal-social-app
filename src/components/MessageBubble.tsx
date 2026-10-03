@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { Message, User } from '../types';
-import { Reply, Smile, MoreVertical, Trash2, Edit3, Download, FileText } from 'lucide-react';
+import { Reply, Heart, MoreVertical, Trash2, Edit3, Download, FileText } from 'lucide-react';
 import { VoicePlayer } from './VoicePlayer';
 import { soundFX } from '../services/soundEffects';
 
@@ -84,7 +84,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           onClick={() => setShowEmojiPicker(!showEmojiPicker)}
           title="React"
         >
-          <Smile size={14} />
+          <Heart size={14} strokeWidth={1.75} />
         </button>
         <button
           className="hover-action-btn"
