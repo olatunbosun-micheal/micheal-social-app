@@ -1,0 +1,17 @@
+{
+  "short_name": "Gateway",
+  "name": "Personal Communication Gateway",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0b141a",
+  "theme_color": "#128c7e",
+  "display": "standalone",
+  "orientation": "portrait",
+  "description": "Private, isolated one-to-one communication gateway."
+}
