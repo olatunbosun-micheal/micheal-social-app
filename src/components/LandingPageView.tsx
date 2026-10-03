@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowRight, Lock, Mail, Shield, MessageSquare, Key, ShieldCheck, Check, Moon, Sun, Sparkles } from 'lucide-react';
+import { ArrowRight, Lock, Mail, Shield, MessageSquare, Key, ShieldCheck, Moon, Sun, Sparkles } from 'lucide-react';
 import type { User, ThemeMode } from '../types';
 import { API_BASE } from '../config';
 
@@ -23,15 +23,6 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
   const [inviteCodeInput, setInviteCodeInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [autofilledOwner, setAutofilledOwner] = useState(false);
-
-  const handleFillOwnerCredentials = () => {
-    setEmail('micheal@gateway.internal');
-    setPassword('admin_change_me_123');
-    setAutofilledOwner(true);
-    setError(null);
-    setTimeout(() => setAutofilledOwner(false), 3000);
-  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,11 +86,6 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                 <span>{theme === 'midnight' ? 'Midnight' : theme === 'light' ? 'Light' : 'Obsidian'}</span>
               </button>
             )}
-
-            <div className="land-status-badge">
-              <span className="land-status-dot" />
-              <span>DIRECT NETWORK ACTIVE</span>
-            </div>
           </div>
         </header>
 
@@ -184,37 +170,6 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
 
             {tab === 'signin' ? (
               <form className="land-form" onSubmit={handleLogin}>
-                {/* High-Visibility Owner Credentials Helper Box */}
-                <div className="land-cred-helper">
-                  <div className="land-cred-label">System Owner Credentials</div>
-                  <div className="land-cred-values">
-                    <span>
-                      <strong className="land-cred-key">Email:</strong>
-                      <code>micheal@gateway.internal</code>
-                    </span>
-                    <span>
-                      <strong className="land-cred-key">Password:</strong>
-                      <code>admin_change_me_123</code>
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    className="land-autofill-btn"
-                    onClick={handleFillOwnerCredentials}
-                  >
-                    {autofilledOwner ? (
-                      <>
-                        <Check size={12} strokeWidth={2.5} />
-                        <span>Filled Owner Credentials</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Autofill Owner Login</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-
                 <div className="land-field">
                   <label className="land-label">Account Email</label>
                   <div className="land-input-row">
