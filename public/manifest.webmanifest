@@ -1,17 +1,46 @@
 {
+  "name": "Gateway — Personal Communication Gateway",
   "short_name": "Gateway",
-  "name": "Personal Communication Gateway",
+  "description": "Secure, isolated private 1-on-1 communication gateway with real-time messaging, audio, and video calling.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#080b11",
+  "theme_color": "#080b11",
+  "categories": ["communication", "productivity", "utilities"],
   "icons": [
+    {
+      "src": "/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    },
     {
       "src": "/favicon.svg",
       "type": "image/svg+xml",
-      "sizes": "192x192 512x512"
+      "sizes": "any"
     }
   ],
-  "start_url": "/",
-  "background_color": "#0b141a",
-  "theme_color": "#128c7e",
-  "display": "standalone",
-  "orientation": "portrait",
-  "description": "Private, isolated one-to-one communication gateway."
+  "shortcuts": [
+    {
+      "name": "Direct Inbox",
+      "url": "/",
+      "description": "Open private communication stream"
+    }
+  ]
 }

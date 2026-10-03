@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { ArrowRight, Lock, Mail, Shield, MessageSquare, Key, ShieldCheck, Moon, Sun, Sparkles } from 'lucide-react';
+import { ArrowRight, Lock, Mail, Shield, MessageSquare, Key, ShieldCheck, Moon, Sun, Sparkles, Download } from 'lucide-react';
 import type { User, ThemeMode } from '../types';
 import { API_BASE } from '../config';
+import { usePWAInstall } from '../hooks/usePWAInstall';
 
 interface LandingPageViewProps {
   ownerName: string;
@@ -17,6 +18,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
   onToggleTheme,
   onLoginSuccess,
 }) => {
+  const { isInstallable, installApp } = usePWAInstall();
   const [tab, setTab] = useState<'signin' | 'invite'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -69,6 +71,19 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {isInstallable && (
+              <button
+                type="button"
+                className="land-theme-toggle-btn"
+                style={{ color: 'var(--accent-primary)', borderColor: 'var(--border-strong)' }}
+                onClick={installApp}
+                title="Install Gateway as Desktop or Mobile PWA App"
+              >
+                <Download size={13} strokeWidth={2} />
+                <span>Install App</span>
+              </button>
+            )}
+
             {onToggleTheme && (
               <button
                 type="button"

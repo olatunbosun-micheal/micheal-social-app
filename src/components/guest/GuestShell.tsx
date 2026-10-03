@@ -8,7 +8,8 @@ import { MediaLightbox } from '../MediaLightbox';
 import { CallModal, type CallSession } from '../call/CallModal';
 import { API_BASE } from '../../config';
 import { realtimeClient } from '../../services/realtimeClient';
-import { LogOut, Moon, Sun, ShieldCheck } from 'lucide-react';
+import { LogOut, Moon, Sun, ShieldCheck, Download } from 'lucide-react';
+import { usePWAInstall } from '../../hooks/usePWAInstall';
 
 interface GuestShellProps {
   currentUser: User;
@@ -23,6 +24,7 @@ export const GuestShell: React.FC<GuestShellProps> = ({
   theme,
   onToggleTheme,
 }) => {
+  const { isInstallable, installApp } = usePWAInstall();
   const [ownerUser, setOwnerUser] = useState<User>({
     id: 'user_micheal',
     name: 'Micheal',
@@ -365,6 +367,22 @@ export const GuestShell: React.FC<GuestShellProps> = ({
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+                {isInstallable && (
+                  <button
+                    className="control-btn"
+                    style={{
+                      justifyContent: 'space-between',
+                      padding: '10px 14px',
+                      color: 'var(--accent-primary)',
+                      borderColor: 'var(--accent-primary)',
+                    }}
+                    onClick={installApp}
+                  >
+                    <span>Install Gateway PWA</span>
+                    <Download size={15} />
+                  </button>
+                )}
+
                 <button className="control-btn" style={{ justifyContent: 'space-between', padding: '10px 14px' }} onClick={onToggleTheme}>
                   <span>Theme: {theme.toUpperCase()}</span>
                   {theme === 'dark' ? <Moon size={15} /> : <Sun size={15} />}

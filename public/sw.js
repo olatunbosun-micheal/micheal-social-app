@@ -1,0 +1,104 @@
+// Gateway Service Worker — Offline Support & PWA Installation
+const CACHE_NAME = 'gateway-pwa-v1';
+
+const STATIC_ASSETS = [
+  '/',
+  '/index.html',
+  '/manifest.webmanifest',
+  '/favicon.svg',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/icon-maskable-512.png',
+  '/apple-touch-icon.png',
+];
+
+// Install: Cache core shell
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(STATIC_ASSETS).catch((err) => {
+        console.warn('[SW] Cache prefetch error:', err);
+      });
+    })
+  );
+  self.skipWaiting();
+});
+
+// Activate: Cleanup old caches
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.map((key) => {
+          if (key !== CACHE_NAME) {
+            return caches.delete(key);
+          }
+        })
+      );
+    })
+  );
+  self.clients.claim();
+});
+
+// Fetch: Network first with Cache fallback for app shell, bypass API & media
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+
+  // Do not intercept non-GET, API requests, uploads, or WebSocket endpoints
+  if (
+    event.request.method !== 'GET' ||
+    url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/uploads/') ||
+    url.protocol.startsWith('ws')
+  ) {
+    return;
+  }
+
+  event.respondWith(
+    fetch(event.request)
+      .then((networkResponse) => {
+        // Cache successful responses for static assets
+        if (
+          networkResponse &&
+          networkResponse.status === 200 &&
+          (url.pathname.startsWith('/assets/') || STATIC_ASSETS.includes(url.pathname))
+        ) {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+        }
+        return networkResponse;
+      })
+      .catch(() => {
+        // Fallback to cache if offline
+        return caches.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          // Fallback to root index.html for navigation requests
+          if (event.request.mode === 'navigate') {
+            return caches.match('/index.html');
+          }
+          return new Response('Network unavailable', { status: 503, statusText: 'Offline' });
+        });
+      })
+  );
+});
+
+// Notification click handler — focus or open app window
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ('focus' in client) {
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow('/');
+      }
+    })
+  );
+});

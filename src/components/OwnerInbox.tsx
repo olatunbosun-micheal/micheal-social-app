@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { Conversation, Message } from '../types';
-import { Search, SlidersHorizontal, Image, Mic, FileText, Pin, UserPlus } from 'lucide-react';
+import { Search, SlidersHorizontal, Image, Mic, FileText, Pin, UserPlus, Download } from 'lucide-react';
+import { usePWAInstall } from '../hooks/usePWAInstall';
 
 interface OwnerInboxProps {
   conversations: Conversation[];
@@ -20,6 +21,7 @@ export const OwnerInbox: React.FC<OwnerInboxProps> = ({
   typingUsers,
   onOpenInviteModal,
 }) => {
+  const { isInstallable, installApp } = usePWAInstall();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'unread' | 'archived'>('all');
 
@@ -56,6 +58,18 @@ export const OwnerInbox: React.FC<OwnerInboxProps> = ({
           <span>Inbox</span>
         </div>
         <div className="inbox-header-actions">
+          {isInstallable && (
+            <button
+              className="control-btn"
+              onClick={installApp}
+              title="Install Gateway PWA"
+              style={{ padding: '4px 8px', color: 'var(--accent-primary)', borderColor: 'var(--accent-primary)' }}
+            >
+              <Download size={13} />
+              <span>Install</span>
+            </button>
+          )}
+
           {onOpenInviteModal && (
             <button
               className="control-btn active"
