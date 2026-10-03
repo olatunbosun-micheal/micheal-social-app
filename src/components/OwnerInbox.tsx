@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { Conversation, Message } from '../types';
 import { Search, SlidersHorizontal, Image, Mic, FileText, Pin, UserPlus, Download } from 'lucide-react';
 import { usePWAInstall } from '../hooks/usePWAInstall';
+import { PWAInstallModal } from './PWAInstallModal';
 
 interface OwnerInboxProps {
   conversations: Conversation[];
@@ -21,7 +22,15 @@ export const OwnerInbox: React.FC<OwnerInboxProps> = ({
   typingUsers,
   onOpenInviteModal,
 }) => {
-  const { isInstallable, installApp } = usePWAInstall();
+  const {
+    isInstallable,
+    isIOS,
+    hasPrompt,
+    showGuide,
+    setShowGuide,
+    installApp,
+    triggerNativePrompt,
+  } = usePWAInstall();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'unread' | 'archived'>('all');
 
@@ -208,6 +217,14 @@ export const OwnerInbox: React.FC<OwnerInboxProps> = ({
           })
         )}
       </div>
+
+      <PWAInstallModal
+        isOpen={showGuide}
+        onClose={() => setShowGuide(false)}
+        isIOS={isIOS}
+        hasPrompt={hasPrompt}
+        onTriggerPrompt={triggerNativePrompt}
+      />
     </div>
   );
 };

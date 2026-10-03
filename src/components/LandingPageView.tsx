@@ -3,6 +3,7 @@ import { ArrowRight, Lock, Mail, Shield, MessageSquare, Key, ShieldCheck, Moon, 
 import type { User, ThemeMode } from '../types';
 import { API_BASE } from '../config';
 import { usePWAInstall } from '../hooks/usePWAInstall';
+import { PWAInstallModal } from './PWAInstallModal';
 
 interface LandingPageViewProps {
   ownerName: string;
@@ -18,7 +19,15 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
   onToggleTheme,
   onLoginSuccess,
 }) => {
-  const { isInstallable, installApp } = usePWAInstall();
+  const {
+    isInstallable,
+    isIOS,
+    hasPrompt,
+    showGuide,
+    setShowGuide,
+    installApp,
+    triggerNativePrompt,
+  } = usePWAInstall();
   const [tab, setTab] = useState<'signin' | 'invite'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -260,6 +269,14 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
           <span>ZERO AUDIENCE • NO ALGORITHMIC CURATION</span>
         </footer>
       </div>
+
+      <PWAInstallModal
+        isOpen={showGuide}
+        onClose={() => setShowGuide(false)}
+        isIOS={isIOS}
+        hasPrompt={hasPrompt}
+        onTriggerPrompt={triggerNativePrompt}
+      />
     </div>
   );
 };

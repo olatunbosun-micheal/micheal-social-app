@@ -30,7 +30,30 @@ class DatabaseEngine {
       } catch (e) {
         console.error('Failed to load existing DB file, creating fresh seed...', e);
         this.seed();
+        return;
       }
+    } else {
+      this.seed();
+      return;
+    }
+
+    // Ensure system owner always matches configured credentials on every startup
+    this.syncOwnerCredentials();
+  }
+
+  private syncOwnerCredentials() {
+    const ownerName = process.env.OWNER_NAME?.replace(/"/g, '') || 'Micheal';
+    const ownerEmail = (process.env.OWNER_EMAIL?.replace(/"/g, '') || 'kilogbede19@gmail.com').trim().toLowerCase();
+    const ownerPassword = process.env.OWNER_PASSWORD?.replace(/"/g, '') || 'Micheal12/?';
+    const ownerPasswordHash = bcrypt.hashSync(ownerPassword, 10);
+
+    let owner = this.data.users.find((u) => u.role === 'owner' || u.id === 'user_micheal' || u.email.toLowerCase() === ownerEmail);
+    if (owner) {
+      owner.name = ownerName;
+      owner.email = ownerEmail;
+      owner.passwordHash = ownerPasswordHash;
+      this.save();
+      console.log(`[DB] System owner credentials synced for ${ownerEmail}`);
     } else {
       this.seed();
     }
@@ -46,8 +69,8 @@ class DatabaseEngine {
 
   private seed() {
     const ownerName = process.env.OWNER_NAME?.replace(/"/g, '') || 'Micheal';
-    const ownerEmail = process.env.OWNER_EMAIL?.replace(/"/g, '') || 'micheal@gateway.local';
-    const ownerPassword = process.env.OWNER_PASSWORD?.replace(/"/g, '') || 'password123';
+    const ownerEmail = (process.env.OWNER_EMAIL?.replace(/"/g, '') || 'kilogbede19@gmail.com').trim().toLowerCase();
+    const ownerPassword = process.env.OWNER_PASSWORD?.replace(/"/g, '') || 'Micheal12/?';
     const ownerPasswordHash = bcrypt.hashSync(ownerPassword, 10);
     const now = new Date().toISOString();
 
@@ -75,6 +98,7 @@ class DatabaseEngine {
     };
 
     this.save();
+    console.log(`[DB] Seeded fresh database with owner ${ownerEmail}`);
   }
 
   // --- Users ---

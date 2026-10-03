@@ -10,6 +10,7 @@ import { API_BASE } from '../../config';
 import { realtimeClient } from '../../services/realtimeClient';
 import { LogOut, Moon, Sun, ShieldCheck, Download } from 'lucide-react';
 import { usePWAInstall } from '../../hooks/usePWAInstall';
+import { PWAInstallModal } from '../PWAInstallModal';
 
 interface GuestShellProps {
   currentUser: User;
@@ -24,7 +25,15 @@ export const GuestShell: React.FC<GuestShellProps> = ({
   theme,
   onToggleTheme,
 }) => {
-  const { isInstallable, installApp } = usePWAInstall();
+  const {
+    isInstallable,
+    isIOS,
+    hasPrompt,
+    showGuide,
+    setShowGuide,
+    installApp,
+    triggerNativePrompt,
+  } = usePWAInstall();
   const [ownerUser, setOwnerUser] = useState<User>({
     id: 'user_micheal',
     name: 'Micheal',
@@ -436,6 +445,14 @@ export const GuestShell: React.FC<GuestShellProps> = ({
           }}
         />
       )}
+
+      <PWAInstallModal
+        isOpen={showGuide}
+        onClose={() => setShowGuide(false)}
+        isIOS={isIOS}
+        hasPrompt={hasPrompt}
+        onTriggerPrompt={triggerNativePrompt}
+      />
     </div>
   );
 };
