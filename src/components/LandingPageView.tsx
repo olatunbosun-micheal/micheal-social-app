@@ -43,7 +43,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
       const res = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), password }),
+        body: JSON.stringify({ email: email.trim(), password: password.trim() }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Invalid email or password');

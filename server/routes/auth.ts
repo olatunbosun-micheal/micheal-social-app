@@ -13,8 +13,8 @@ const RegisterInviteSchema = z.object({
 });
 
 const LoginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(1, 'Password is required'),
+  email: z.string().min(1, 'Email or username is required').transform((s) => s.trim().toLowerCase()),
+  password: z.string().min(1, 'Password is required').transform((s) => s.trim()),
 });
 
 // Register with personal invitation code
