@@ -80,33 +80,156 @@ export const App: React.FC = () => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
-  // Load backend invites if available
+  // Auth token state
+  const [authToken, setAuthToken] = useState<string | null>(() => {
+    return typeof window !== 'undefined' ? localStorage.getItem('gateway_token') : null;
+  });
+
+  // Load and sync real conversations from Backend DB
+  const refreshConversations = async (tokenToUse?: string) => {
+    const token = tokenToUse || authToken;
+    if (!token) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/conversations`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.conversations) {
+          setConversations(data.conversations);
+          if (data.conversations.length > 0 && !activeConversationId) {
+            setActiveConversationId(data.conversations[0].id);
+          }
+        }
+      }
+    } catch {
+      // offline fallback
+    }
+  };
+
+  // Fetch messages for active conversation
+  const fetchMessagesForConv = async (convId: string, tokenToUse?: string) => {
+    const token = tokenToUse || authToken;
+    if (!token || !convId) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/conversations/${convId}/messages`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.messages) {
+          setMessages((prev) => ({
+            ...prev,
+            [convId]: data.messages,
+          }));
+        }
+      }
+    } catch {
+      // offline fallback
+    }
+  };
+
+  // Authentication & Realtime Initialization
+  useEffect(() => {
+    const initAuthAndRealtime = async () => {
+      let token = authToken;
+
+      // If no token, log in as owner Micheal by default
+      if (!token) {
+        try {
+          const loginRes = await fetch(`${API_BASE}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: 'micheal@gateway.local', password: 'password123' }),
+          });
+          if (loginRes.ok) {
+            const data = await loginRes.json();
+            token = data.token;
+            setAuthToken(data.token);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('gateway_token', data.token);
+            }
+          }
+        } catch {
+          // offline
+        }
+      }
+
+      if (token) {
+        import('./services/realtimeClient').then(({ realtimeClient }) => {
+          realtimeClient.init(token!);
+
+          // Listen for incoming messages in real-time
+          realtimeClient.on('message.created', (newMsg: Message) => {
+            setMessages((prev) => {
+              const list = prev[newMsg.conversationId] || [];
+              if (list.some((m) => m.id === newMsg.id)) return prev;
+              return {
+                ...prev,
+                [newMsg.conversationId]: [...list, newMsg],
+              };
+            });
+
+            // Update conversation list & unread count
+            refreshConversations(token!);
+          });
+
+          // Listen for typing indicators
+          realtimeClient.on('typing.started', ({ userId }: { userId: string }) => {
+            setTypingUsers((prev) => ({ ...prev, [userId]: true }));
+          });
+
+          realtimeClient.on('typing.stopped', ({ userId }: { userId: string }) => {
+            setTypingUsers((prev) => ({ ...prev, [userId]: false }));
+          });
+        });
+
+        refreshConversations(token);
+      }
+    };
+
+    initAuthAndRealtime();
+
+    // Periodic sync every 6 seconds as a backup
+    const syncInterval = setInterval(() => {
+      refreshConversations();
+    }, 6000);
+
+    return () => clearInterval(syncInterval);
+  }, []);
+
+  // When active conversation changes, join room & fetch history
+  useEffect(() => {
+    if (activeConversationId) {
+      import('./services/realtimeClient').then(({ realtimeClient }) => {
+        realtimeClient.joinConversation(activeConversationId);
+      });
+      fetchMessagesForConv(activeConversationId);
+    }
+  }, [activeConversationId]);
+
+  // Load backend invites
   useEffect(() => {
     const fetchInvites = async () => {
+      if (!authToken) return;
       try {
-        const loginRes = await fetch(`${API_BASE}/auth/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: 'micheal@gateway.local', password: 'password123' }),
+        const invitesRes = await fetch(`${API_BASE}/invites`, {
+          headers: { Authorization: `Bearer ${authToken}` },
         });
-        if (loginRes.ok) {
-          const { token } = await loginRes.json();
-          const invitesRes = await fetch(`${API_BASE}/invites`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (invitesRes.ok) {
-            const data = await invitesRes.json();
-            if (data.invites) {
-              setInvites(data.invites);
-            }
+        if (invitesRes.ok) {
+          const data = await invitesRes.json();
+          if (data.invites) {
+            setInvites(data.invites);
           }
         }
       } catch {
-        // Local fallback
+        // fallback
       }
     };
     fetchInvites();
-  }, []);
+  }, [authToken]);
 
   // Determine current conversation safely
   const activeConversation = conversations.find((c) => c.id === activeConversationId) || conversations[0] || null;
@@ -277,20 +400,33 @@ export const App: React.FC = () => {
       prev.map((c) => (c.id === convId ? { ...c, updatedAt: newMessage.createdAt } : c))
     );
 
-    // Simulate transition: sent -> delivered -> read
-    setTimeout(() => {
-      setMessages((prev) => ({
-        ...prev,
-        [convId]: prev[convId]?.map((m) => (m.id === newMessage.id ? { ...m, status: 'delivered' } : m)) || [],
-      }));
-    }, 600);
-
-    setTimeout(() => {
-      setMessages((prev) => ({
-        ...prev,
-        [convId]: prev[convId]?.map((m) => (m.id === newMessage.id ? { ...m, status: 'read' } : m)) || [],
-      }));
-    }, 1400);
+    // Send to real backend API & WebSocket broadcast
+    if (authToken && convId) {
+      fetch(`${API_BASE}/conversations/${convId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          type,
+          content: content.trim(),
+          attachments: fileData
+            ? [
+                {
+                  id: `att_${Date.now()}`,
+                  type,
+                  url: fileData.url,
+                  fileName: fileData.fileName,
+                  fileSize: fileData.fileSize,
+                  duration: fileData.duration,
+                },
+              ]
+            : undefined,
+          replyToId: replyTo?.id,
+        }),
+      }).catch((err) => console.warn('Message send failed:', err));
+    }
 
     // Auto-Responder simulation if enabled
     if (isAutoResponderEnabled) {
