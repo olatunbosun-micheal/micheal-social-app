@@ -35,6 +35,9 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
       if (!res.ok) {
         throw new Error(data.error || 'Login failed');
       }
+      if (data.token) {
+        localStorage.setItem('gateway_token', data.token);
+      }
       onLoginSuccess(data.user);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Invalid email or password');

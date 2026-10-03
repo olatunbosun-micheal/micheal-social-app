@@ -83,6 +83,10 @@ export const InviteLandingView: React.FC<InviteLandingViewProps> = ({
         throw new Error(data.error || 'Registration failed');
       }
 
+      if (data.token) {
+        localStorage.setItem('gateway_token', data.token);
+      }
+
       onSuccess(data.user, data.conversationId);
     } catch {
       // Local fallback in case backend is simulated
