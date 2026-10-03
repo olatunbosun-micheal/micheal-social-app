@@ -4,6 +4,15 @@ import { Reply, Smile, MoreVertical, Trash2, Edit3, Download, FileText } from 'l
 import { VoicePlayer } from './VoicePlayer';
 import { soundFX } from '../services/soundEffects';
 
+// Resolve relative server media paths to absolute URLs
+const resolveMediaUrl = (url: string): string => {
+  if (!url) return url;
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:')) return url;
+  // Relative path from server (e.g. /api/media/files/...)
+  const base = import.meta.env.PROD ? '' : (import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://127.0.0.1:4000');
+  return `${base}${url}`;
+};
+
 interface MessageBubbleProps {
   message: Message;
   currentUser: User;
@@ -204,13 +213,22 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         {/* Media Attachments */}
         {message.attachments?.map((att) => {
           if (att.type === 'image') {
+            const imgSrc = resolveMediaUrl(att.url);
             return (
               <div
                 key={att.id}
                 className="bubble-image-wrapper"
-                onClick={() => onOpenImage(att.url, message.content)}
+                onClick={() => onOpenImage(imgSrc, message.content)}
               >
-                <img src={att.url} alt={att.fileName} className="bubble-image" />
+                <img
+                  src={imgSrc}
+                  alt={att.fileName}
+                  className="bubble-image"
+                  onError={(e) => {
+                    // If image fails to load, show a placeholder
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
               </div>
             );
           }
@@ -219,7 +237,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             return (
               <VoicePlayer
                 key={att.id}
-                url={att.url}
+                url={resolveMediaUrl(att.url)}
                 duration={att.duration || 14}
                 messageId={message.id}
               />
@@ -227,6 +245,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           }
 
           if (att.type === 'file') {
+            const fileUrl = resolveMediaUrl(att.url);
+            const fileSizeMb = att.fileSize ? (att.fileSize / (1024 * 1024)).toFixed(1) : '?';
+            const ext = att.fileName?.split('.').pop()?.toUpperCase() || 'FILE';
             return (
               <div key={att.id} className="bubble-file-attachment">
                 <div className="file-icon-box">
@@ -235,16 +256,20 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                 <div className="file-meta-box">
                   <div className="file-name">{att.fileName}</div>
                   <div className="file-size">
-                    {(att.fileSize / (1024 * 1024)).toFixed(1)} MB • PDF
+                    {fileSizeMb} MB • {ext}
                   </div>
                 </div>
-                <button
+                <a
+                  href={fileUrl}
+                  download={att.fileName}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="icon-action-btn"
-                  onClick={() => alert(`Downloading private file: ${att.fileName}`)}
                   title="Download File"
+                  style={{ textDecoration: 'none' }}
                 >
                   <Download size={16} />
-                </button>
+                </a>
               </div>
             );
           }

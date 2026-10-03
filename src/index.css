@@ -1908,3 +1908,10 @@ select.form-input option {
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
 }
 
+/* Spin animation for upload loader */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+

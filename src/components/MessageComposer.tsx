@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { Paperclip, Mic, Send, X, Image, FileText, Trash2, CheckCircle2 } from 'lucide-react';
+import { Paperclip, Mic, Send, X, Image, FileText, Trash2, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 import type { ReplyContext } from '../types';
 import { soundFX } from '../services/soundEffects';
+import { API_BASE } from '../config';
 
 interface MessageComposerProps {
   onSendMessage: (content: string, type?: 'text' | 'image' | 'file' | 'audio', fileData?: { url: string; fileName: string; fileSize: number; duration?: number }) => void;
@@ -137,25 +138,57 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
     setRecordingSeconds(0);
   };
 
-  // Handle File Upload Simulation
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // Handle File Upload — uploads to server, gets back a permanent URL
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Reset the input so the same file can be re-selected if needed
+    e.target.value = '';
 
     setShowAttachmentMenu(false);
-    const isImg = file.type.startsWith('image/');
-    const previewUrl = URL.createObjectURL(file);
+    setUploadError(null);
+    setIsUploading(true);
 
-    onSendMessage(
-      isImg ? 'Photo attachment' : file.name,
-      isImg ? 'image' : 'file',
-      {
-        url: previewUrl,
-        fileName: file.name,
-        fileSize: file.size,
+    try {
+      const token = localStorage.getItem('gateway_token');
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch(`${API_BASE}/media/upload`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Upload failed' }));
+        throw new Error(err.error || 'Upload failed');
       }
-    );
+
+      const attachment = await res.json();
+      // attachment = { id, type, url, fileName, fileSize, mimeType }
+
+      const isImg = attachment.type === 'image';
+      onSendMessage(
+        isImg ? '' : file.name,
+        attachment.type as 'image' | 'file' | 'audio',
+        {
+          url: attachment.url,
+          fileName: attachment.fileName,
+          fileSize: attachment.fileSize,
+        }
+      );
+    } catch (err: unknown) {
+      console.error('Upload error:', err);
+      setUploadError(err instanceof Error ? err.message : 'Upload failed. Try again.');
+    } finally {
+      setIsUploading(false);
+    }
   };
+
 
   const formatRecordTime = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -175,6 +208,23 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
 
   return (
     <div className="composer-container">
+      {/* Upload Error Banner */}
+      {uploadError && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', background: 'rgba(244,63,94,0.12)', color: 'var(--accent-danger)', fontSize: 13, borderTop: '1px solid rgba(244,63,94,0.25)' }}>
+          <AlertCircle size={14} />
+          <span>{uploadError}</span>
+          <button style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }} onClick={() => setUploadError(null)}><X size={14} /></button>
+        </div>
+      )}
+
+      {/* Upload Progress Banner */}
+      {isUploading && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', background: 'rgba(99,102,241,0.10)', color: 'var(--accent-primary)', fontSize: 13, borderTop: '1px solid var(--border-subtle)' }}>
+          <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+          <span>Uploading file...</span>
+        </div>
+      )}
+
       {/* Quoted Reply Banner */}
       {replyTo && (
         <div className="composer-reply-banner">
