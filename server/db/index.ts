@@ -48,14 +48,14 @@ class DatabaseEngine {
     const ownerName = process.env.OWNER_NAME?.replace(/"/g, '') || 'Micheal';
     const ownerEmail = process.env.OWNER_EMAIL?.replace(/"/g, '') || 'micheal@gateway.local';
     const ownerPassword = process.env.OWNER_PASSWORD?.replace(/"/g, '') || 'password123';
-    const defaultPasswordHash = bcrypt.hashSync(ownerPassword, 10);
+    const ownerPasswordHash = bcrypt.hashSync(ownerPassword, 10);
     const now = new Date().toISOString();
 
     const owner: UserRecord = {
       id: 'user_micheal',
       name: ownerName,
       email: ownerEmail,
-      passwordHash: defaultPasswordHash,
+      passwordHash: ownerPasswordHash,
       role: 'owner',
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
       statusMessage: 'Available for private 1-on-1 briefings & discussions',
@@ -66,164 +66,12 @@ class DatabaseEngine {
       updatedAt: now,
     };
 
-    const sarah: UserRecord = {
-      id: 'user_sarah',
-      name: 'Sarah Jenkins',
-      email: 'sarah.j@example.com',
-      passwordHash: defaultPasswordHash,
-      role: 'guest',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=80',
-      statusMessage: 'Product design & UI architecture',
-      isBlocked: false,
-      isOnline: true,
-      lastSeen: 'online',
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    const david: UserRecord = {
-      id: 'user_david',
-      name: 'David Chen',
-      email: 'david.chen@example.com',
-      passwordHash: defaultPasswordHash,
-      role: 'guest',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80',
-      statusMessage: 'Lead Frontend Engineer',
-      isBlocked: false,
-      isOnline: false,
-      lastSeen: 'today at 14:15',
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    const tobi: UserRecord = {
-      id: 'user_tobi',
-      name: 'Tobi Adeleke',
-      email: 'tobi.a@example.com',
-      passwordHash: defaultPasswordHash,
-      role: 'guest',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80',
-      statusMessage: 'Founder @ Apex Labs',
-      isBlocked: false,
-      isOnline: true,
-      lastSeen: 'online',
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    const sampleInvite: InviteRecord = {
-      id: 'inv_vip_sarah',
-      code: 'A8K29Lm',
-      recipientName: 'Sarah',
-      note: 'Direct VIP invitation link for design collaboration',
-      createdById: owner.id,
-      maxUses: 1,
-      usedCount: 1,
-      isRevoked: false,
-      expiresAt: null,
-      createdAt: now,
-      usedByUserIds: [sarah.id],
-    };
-
-    const convSarah: ConversationRecord = {
-      id: 'conv_sarah',
-      guestId: sarah.id,
-      ownerId: owner.id,
-      unreadCountOwner: 1,
-      unreadCountGuest: 0,
-      isArchived: false,
-      isPinned: true,
-      lastMessageAt: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    const convDavid: ConversationRecord = {
-      id: 'conv_david',
-      guestId: david.id,
-      ownerId: owner.id,
-      unreadCountOwner: 0,
-      unreadCountGuest: 0,
-      isArchived: false,
-      isPinned: false,
-      lastMessageAt: new Date(Date.now() - 35 * 60 * 1000).toISOString(),
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    const convTobi: ConversationRecord = {
-      id: 'conv_tobi',
-      guestId: tobi.id,
-      ownerId: owner.id,
-      unreadCountOwner: 2,
-      unreadCountGuest: 0,
-      isArchived: false,
-      isPinned: false,
-      lastMessageAt: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    const msgs: MessageRecord[] = [
-      {
-        id: 'msg_s_1',
-        conversationId: convSarah.id,
-        senderId: owner.id,
-        type: 'text',
-        content: 'Hey Sarah! Welcome to our private communication channel. No algorithms, no third parties — just direct 1-on-1 contact.',
-        status: 'read',
-        reactions: [{ emoji: '❤️', userId: sarah.id, userName: 'Sarah', createdAt: now }],
-        isEdited: false,
-        isDeletedForEveryone: false,
-        deletedForUserIds: [],
-        createdAt: new Date(Date.now() - 28 * 60 * 1000).toISOString(),
-        updatedAt: now,
-      },
-      {
-        id: 'msg_s_2',
-        conversationId: convSarah.id,
-        senderId: sarah.id,
-        type: 'text',
-        content: 'Hi Micheal! This is so refreshing. It feels just like a private direct messenger. I just finished the new design system draft!',
-        status: 'read',
-        reactions: [{ emoji: '👍', userId: owner.id, userName: 'Micheal', createdAt: now }],
-        isEdited: false,
-        isDeletedForEveryone: false,
-        deletedForUserIds: [],
-        createdAt: new Date(Date.now() - 22 * 60 * 1000).toISOString(),
-        updatedAt: now,
-      },
-      {
-        id: 'msg_s_3',
-        conversationId: convSarah.id,
-        senderId: sarah.id,
-        type: 'image',
-        content: 'Here is the preliminary mobile UI preview.',
-        attachments: [
-          {
-            id: 'att_s_img',
-            type: 'image',
-            url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
-            fileName: 'Gateway_Mobile_Concept_v1.png',
-            fileSize: 1420000,
-            mimeType: 'image/png',
-          },
-        ],
-        status: 'read',
-        reactions: [{ emoji: '😮', userId: owner.id, userName: 'Micheal', createdAt: now }],
-        isEdited: false,
-        isDeletedForEveryone: false,
-        deletedForUserIds: [],
-        createdAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-        updatedAt: now,
-      },
-    ];
-
+    // Clean slate — no demo guests, no fake conversations, no sample messages
     this.data = {
-      users: [owner, sarah, david, tobi],
-      invites: [sampleInvite],
-      conversations: [convSarah, convDavid, convTobi],
-      messages: msgs,
+      users: [owner],
+      invites: [],
+      conversations: [],
+      messages: [],
     };
 
     this.save();
