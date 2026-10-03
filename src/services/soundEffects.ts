@@ -155,6 +155,91 @@ class SoundFXService {
       // Audio catch
     }
   }
+
+  // Active ringtone interval
+  private ringtoneTimer: number | null = null;
+
+  playRingtone() {
+    if (!this.enabled) return;
+    this.stopRingtone();
+
+    const ring = () => {
+      try {
+        const ctx = this.getAudioContext();
+        if (!ctx) return;
+
+        const now = ctx.currentTime;
+        // Dual-frequency modern phone chime
+        [
+          { freq1: 440, freq2: 480, offset: 0, dur: 0.4 },
+          { freq1: 440, freq2: 480, offset: 0.55, dur: 0.4 },
+        ].forEach(({ freq1, freq2, offset, dur }) => {
+          const osc1 = ctx.createOscillator();
+          const osc2 = ctx.createOscillator();
+          const gain = ctx.createGain();
+
+          osc1.type = 'sine';
+          osc2.type = 'sine';
+          osc1.frequency.setValueAtTime(freq1, now + offset);
+          osc2.frequency.setValueAtTime(freq2, now + offset);
+
+          gain.gain.setValueAtTime(0.12, now + offset);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + offset + dur);
+
+          osc1.connect(gain);
+          osc2.connect(gain);
+          gain.connect(ctx.destination);
+
+          osc1.start(now + offset);
+          osc2.start(now + offset);
+          osc1.stop(now + offset + dur + 0.05);
+          osc2.stop(now + offset + dur + 0.05);
+        });
+      } catch {
+        // Audio policy catch
+      }
+    };
+
+    ring();
+    this.ringtoneTimer = window.setInterval(ring, 2600);
+  }
+
+  stopRingtone() {
+    if (this.ringtoneTimer) {
+      clearInterval(this.ringtoneTimer);
+      this.ringtoneTimer = null;
+    }
+  }
+
+  // Call disconnected tone (3 short beeps)
+  playCallEnd() {
+    this.stopRingtone();
+    if (!this.enabled) return;
+    try {
+      const ctx = this.getAudioContext();
+      if (!ctx) return;
+
+      const now = ctx.currentTime;
+      [0, 0.16, 0.32].forEach((offset) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(425, now + offset);
+
+        gain.gain.setValueAtTime(0.1, now + offset);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.1);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(now + offset);
+        osc.stop(now + offset + 0.11);
+      });
+    } catch {
+      // Audio catch
+    }
+  }
 }
 
 export const soundFX = new SoundFXService();

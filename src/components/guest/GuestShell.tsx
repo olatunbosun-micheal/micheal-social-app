@@ -5,6 +5,7 @@ import { MessageList } from '../MessageList';
 import { MessageComposer } from '../MessageComposer';
 import { InfoDrawer } from '../InfoDrawer';
 import { MediaLightbox } from '../MediaLightbox';
+import { CallModal, type CallSession } from '../call/CallModal';
 import { API_BASE } from '../../config';
 import { realtimeClient } from '../../services/realtimeClient';
 import { LogOut, Moon, Sun, ShieldCheck } from 'lucide-react';
@@ -42,6 +43,7 @@ export const GuestShell: React.FC<GuestShellProps> = ({
   const [lightboxCaption, setLightboxCaption] = useState<string | undefined>(undefined);
   const [isOwnerTyping, setIsOwnerTyping] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [callSession, setCallSession] = useState<CallSession | null>(null);
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('gateway_token') : null;
 
@@ -112,6 +114,16 @@ export const GuestShell: React.FC<GuestShellProps> = ({
           setOwnerUser((prev) => ({ ...prev, isOnline, lastSeen }));
         }
       });
+
+      realtimeClient.on('call.start', (data: { fromUserId: string; conversationId: string; isVideo: boolean; callerName: string; callerAvatar?: string }) => {
+        setCallSession({
+          targetUser: ownerUser,
+          conversationId: data.conversationId || conversationId,
+          isVideo: !!data.isVideo,
+          direction: 'incoming',
+          status: 'ringing',
+        });
+      });
     }
 
     // Auto-refresh periodically as a fallback
@@ -125,6 +137,25 @@ export const GuestShell: React.FC<GuestShellProps> = ({
       realtimeClient.joinConversation(conversationId);
     }
   }, [conversationId]);
+
+  // Start WebRTC Call (Audio or Video)
+  const handleStartCall = (isVideo: boolean) => {
+    if (!conversationId) return;
+    setCallSession({
+      targetUser: ownerUser,
+      conversationId,
+      isVideo,
+      direction: 'outgoing',
+      status: 'calling',
+    });
+    realtimeClient.initiateCall({
+      targetUserId: ownerUser.id,
+      conversationId,
+      isVideo,
+      callerName: currentUser.name,
+      callerAvatar: currentUser.avatar,
+    });
+  };
 
   // Send message handler
   const handleSendMessage = async (
@@ -243,6 +274,7 @@ export const GuestShell: React.FC<GuestShellProps> = ({
           showBackButton={false}
           theme={theme}
           onToggleTheme={onToggleTheme}
+          onStartCall={handleStartCall}
         />
 
         {/* Message Stream */}
@@ -361,6 +393,18 @@ export const GuestShell: React.FC<GuestShellProps> = ({
           setLightboxCaption(undefined);
         }}
       />
+
+      {/* WebRTC Live Audio / Video Call Modal */}
+      {callSession && (
+        <CallModal
+          session={callSession}
+          currentUser={currentUser}
+          onEndCall={() => setCallSession(null)}
+          onAcceptCall={(video) => {
+            setCallSession((prev) => (prev ? { ...prev, isVideo: video, status: 'connected' } : null));
+          }}
+        />
+      )}
     </div>
   );
 };

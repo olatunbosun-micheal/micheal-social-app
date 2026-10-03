@@ -83,15 +83,34 @@ class RealtimeClient {
     }
   }
 
-  public sendTyping(conversationId: string, isTyping: boolean) {
+  public send(event: string, data: any) {
     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-      this.socket.send(
-        JSON.stringify({
-          event: isTyping ? 'typing.started' : 'typing.stopped',
-          data: { conversationId },
-        })
-      );
+      this.socket.send(JSON.stringify({ event, data }));
     }
+  }
+
+  public sendTyping(conversationId: string, isTyping: boolean) {
+    this.send(isTyping ? 'typing.started' : 'typing.stopped', { conversationId });
+  }
+
+  public initiateCall(params: { targetUserId: string; conversationId: string; isVideo: boolean; callerName: string; callerAvatar?: string }) {
+    this.send('call.start', params);
+  }
+
+  public acceptCall(params: { targetUserId: string; conversationId: string }) {
+    this.send('call.accept', params);
+  }
+
+  public rejectCall(params: { targetUserId: string; conversationId: string; reason?: string }) {
+    this.send('call.reject', params);
+  }
+
+  public endCall(params: { targetUserId: string; conversationId: string }) {
+    this.send('call.end', params);
+  }
+
+  public sendCallSignal(params: { targetUserId: string; signal: any }) {
+    this.send('call.signal', params);
   }
 
   public on(event: string, cb: EventCallback) {

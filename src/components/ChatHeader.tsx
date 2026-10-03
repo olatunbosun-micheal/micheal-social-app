@@ -10,6 +10,7 @@ interface ChatHeaderProps {
   showBackButton?: boolean;
   theme?: string;
   onToggleTheme?: () => void;
+  onStartCall?: (isVideo: boolean) => void;
 }
 
 export const ChatHeader: React.FC<ChatHeaderProps> = ({
@@ -20,6 +21,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   showBackButton = false,
   theme,
   onToggleTheme,
+  onStartCall,
 }) => {
   return (
     <div className="chat-header">
@@ -61,16 +63,16 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
       <div className="chat-header-actions">
         <button
           className="icon-action-btn"
-          onClick={() => alert('Audio Calling is scheduled for Phase 2 implementation.')}
-          title="Voice Call (Phase 2)"
+          onClick={() => onStartCall?.(false)}
+          title="Direct Voice Call"
         >
           <Phone size={19} />
         </button>
 
         <button
           className="icon-action-btn"
-          onClick={() => alert('Video Calling is scheduled for Phase 2 implementation.')}
-          title="Video Call (Phase 2)"
+          onClick={() => onStartCall?.(true)}
+          title="Secure Video Call"
         >
           <Video size={20} />
         </button>

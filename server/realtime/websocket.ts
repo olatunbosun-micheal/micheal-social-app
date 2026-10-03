@@ -112,6 +112,34 @@ const handleSocketEvent = (ws: AuthenticatedSocket, message: { event: string; da
       }, ws);
     }
   }
+
+  // WebRTC 1-on-1 Call Signaling (Audio & Video)
+  if (
+    event === 'call.start' ||
+    event === 'call.accept' ||
+    event === 'call.reject' ||
+    event === 'call.end' ||
+    event === 'call.signal'
+  ) {
+    const callData = data as { targetUserId?: string; conversationId?: string; [key: string]: unknown };
+    if (callData.targetUserId) {
+      const recipientSockets = userSockets.get(callData.targetUserId);
+      if (recipientSockets) {
+        const messageString = JSON.stringify({
+          event,
+          data: {
+            ...callData,
+            fromUserId: ws.userId,
+          },
+        });
+        recipientSockets.forEach((s) => {
+          if (s.readyState === WebSocket.OPEN) {
+            s.send(messageString);
+          }
+        });
+      }
+    }
+  }
 };
 
 export const broadcastToConversation = (

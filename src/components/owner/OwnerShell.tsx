@@ -8,6 +8,7 @@ import { InfoDrawer } from '../InfoDrawer';
 import { InviteModal } from '../InviteModal';
 import type { InviteData } from '../InviteModal';
 import { MediaLightbox } from '../MediaLightbox';
+import { CallModal, type CallSession } from '../call/CallModal';
 import { API_BASE } from '../../config';
 import { realtimeClient } from '../../services/realtimeClient';
 import { UserPlus, LogOut, Moon, Sun, ShieldCheck } from 'lucide-react';
@@ -35,6 +36,7 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [lightboxCaption, setLightboxCaption] = useState<string | undefined>(undefined);
   const [typingUsers, setTypingUsers] = useState<Record<string, boolean>>({});
+  const [callSession, setCallSession] = useState<CallSession | null>(null);
 
   // Mobile navigation
   const [mobileView, setMobileView] = useState<'inbox' | 'chat'>('inbox');
@@ -137,6 +139,26 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
       realtimeClient.on('typing.stopped', ({ userId }: { userId: string }) => {
         setTypingUsers((prev) => ({ ...prev, [userId]: false }));
       });
+
+      realtimeClient.on('call.start', (data: { fromUserId: string; conversationId: string; isVideo: boolean; callerName: string; callerAvatar?: string }) => {
+        const callerUser: User = conversations.find((c) => c.guestUser.id === data.fromUserId)?.guestUser || {
+          id: data.fromUserId,
+          name: data.callerName || 'Guest User',
+          email: '',
+          role: 'guest',
+          avatar: data.callerAvatar || '',
+          isOnline: true,
+          lastSeen: 'online',
+        };
+
+        setCallSession({
+          targetUser: callerUser,
+          conversationId: data.conversationId,
+          isVideo: !!data.isVideo,
+          direction: 'incoming',
+          status: 'ringing',
+        });
+      });
     }
 
     const interval = setInterval(() => {
@@ -205,6 +227,25 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
     } catch (err) {
       console.warn('Revoke failed:', err);
     }
+  };
+
+  // Start WebRTC Call (Audio or Video)
+  const handleStartCall = (isVideo: boolean) => {
+    if (!contactUser || !activeConversationId) return;
+    setCallSession({
+      targetUser: contactUser,
+      conversationId: activeConversationId,
+      isVideo,
+      direction: 'outgoing',
+      status: 'calling',
+    });
+    realtimeClient.initiateCall({
+      targetUserId: contactUser.id,
+      conversationId: activeConversationId,
+      isVideo,
+      callerName: ownerUser.name,
+      callerAvatar: ownerUser.avatar,
+    });
   };
 
   // Send Message
@@ -381,6 +422,7 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
                 onBack={() => setMobileView('inbox')}
                 theme={theme}
                 onToggleTheme={onToggleTheme}
+                onStartCall={handleStartCall}
               />
 
               <MessageList
@@ -486,6 +528,18 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
           setLightboxCaption(undefined);
         }}
       />
+
+      {/* WebRTC Live Audio / Video Call Modal */}
+      {callSession && (
+        <CallModal
+          session={callSession}
+          currentUser={ownerUser}
+          onEndCall={() => setCallSession(null)}
+          onAcceptCall={(video) => {
+            setCallSession((prev) => (prev ? { ...prev, isVideo: video, status: 'connected' } : null));
+          }}
+        />
+      )}
     </div>
   );
 };
