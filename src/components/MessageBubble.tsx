@@ -222,12 +222,28 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               >
                 <img
                   src={imgSrc}
-                  alt={att.fileName}
+                  alt={att.fileName || 'Photo'}
                   className="bubble-image"
-                  onError={(e) => {
-                    // If image fails to load, show a placeholder
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
+                  loading="lazy"
+                />
+              </div>
+            );
+          }
+
+          if (att.type === 'video') {
+            const vidSrc = resolveMediaUrl(att.url);
+            return (
+              <div
+                key={att.id}
+                className="bubble-video-wrapper"
+                style={{ margin: '4px 0', maxWidth: 360, borderRadius: 4, overflow: 'hidden' }}
+              >
+                <video
+                  src={vidSrc}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  style={{ width: '100%', maxHeight: 260, display: 'block', background: '#0a0d14' }}
                 />
               </div>
             );
@@ -278,9 +294,13 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         })}
 
         {/* Text Content */}
-        {message.type !== 'audio' && message.content && (
-          <div className="message-text">{message.content}</div>
-        )}
+        {message.type !== 'audio' &&
+          message.content &&
+          (!message.attachments ||
+            message.attachments.length === 0 ||
+            !message.attachments.some((a) => a.fileName === message.content)) && (
+            <div className="message-text">{message.content}</div>
+          )}
 
         {/* Bubble Meta Footer */}
         <div className="bubble-meta-footer">

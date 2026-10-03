@@ -119,11 +119,26 @@ export const broadcastToConversation = (
   payload: { event: string; data: unknown },
   excludeSocket?: AuthenticatedSocket
 ): void => {
-  const sockets = clientRooms.get(conversationId);
-  if (!sockets) return;
+  const targetSockets = new Set<AuthenticatedSocket>();
+
+  const roomSockets = clientRooms.get(conversationId);
+  if (roomSockets) {
+    roomSockets.forEach((s) => targetSockets.add(s));
+  }
+
+  // Also broadcast to the conversation's owner and guest directly via their user sockets
+  const conv = db.findConversationById(conversationId);
+  if (conv) {
+    const ownerSockets = userSockets.get(conv.ownerId);
+    if (ownerSockets) ownerSockets.forEach((s) => targetSockets.add(s));
+    const guestSockets = userSockets.get(conv.guestId);
+    if (guestSockets) guestSockets.forEach((s) => targetSockets.add(s));
+  }
+
+  if (targetSockets.size === 0) return;
 
   const serialized = JSON.stringify(payload);
-  sockets.forEach((s) => {
+  targetSockets.forEach((s) => {
     if (s !== excludeSocket && s.readyState === WebSocket.OPEN) {
       s.send(serialized);
     }

@@ -29,9 +29,8 @@ class RealtimeClient {
     try {
       const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
       const wsProtocol = isHttps ? 'wss:' : 'ws:';
-      const host = typeof window !== 'undefined' && window.location.host 
-        ? window.location.host 
-        : '127.0.0.1:4000';
+      const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+      const host = isLocal ? '127.0.0.1:4000' : (window.location.host || '127.0.0.1:4000');
 
       const wsUrl = `${wsProtocol}//${host}?token=${this.token}`;
       this.socket = new WebSocket(wsUrl);

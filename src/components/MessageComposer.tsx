@@ -5,7 +5,11 @@ import { soundFX } from '../services/soundEffects';
 import { API_BASE } from '../config';
 
 interface MessageComposerProps {
-  onSendMessage: (content: string, type?: 'text' | 'image' | 'file' | 'audio', fileData?: { url: string; fileName: string; fileSize: number; duration?: number }) => void;
+  onSendMessage: (
+    content: string,
+    type?: 'text' | 'image' | 'video' | 'file' | 'audio',
+    fileData?: { url: string; fileName: string; fileSize: number; duration?: number }
+  ) => void;
   replyTo: ReplyContext | null;
   onClearReply: () => void;
   onTypingStart: () => void;
@@ -105,22 +109,54 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
       recordingTimerRef.current = null;
     }
 
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop());
-    }
-
     const duration = Math.max(1, recordingSeconds);
-    const audioUrl = 'recorded_voice_blob';
-    onSendMessage(`Voice note (${duration}s)`, 'audio', {
-      url: audioUrl,
-      fileName: `Voice_Note_${Date.now()}.m4a`,
-      fileSize: 32000 * duration,
-      duration: duration,
-    });
-
+    const chunks = [...audioChunksRef.current];
     setIsRecording(false);
     setRecordingSeconds(0);
+
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== 'inactive') {
+      recorder.onstop = async () => {
+        try {
+          const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+          const audioFile = new File([audioBlob], `voice_note_${Date.now()}.webm`, { type: 'audio/webm' });
+
+          const token = localStorage.getItem('gateway_token');
+          const formData = new FormData();
+          formData.append('file', audioFile);
+
+          const res = await fetch(`${API_BASE}/media/upload`, {
+            method: 'POST',
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            body: formData,
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            onSendMessage(`Voice note (${duration}s)`, 'audio', {
+              url: data.url,
+              fileName: data.fileName || audioFile.name,
+              fileSize: data.fileSize || audioBlob.size,
+              duration,
+            });
+          } else {
+            onSendMessage(`Voice note (${duration}s)`, 'audio', {
+              url: URL.createObjectURL(audioBlob),
+              fileName: audioFile.name,
+              fileSize: audioBlob.size,
+              duration,
+            });
+          }
+        } catch (e) {
+          console.error('Failed to upload voice note:', e);
+        } finally {
+          recorder.stream.getTracks().forEach((track) => track.stop());
+        }
+      };
+      recorder.stop();
+    } else {
+      setUploadError('Microphone permission or device required to record voice notes.');
+    }
   };
 
   // Cancel Voice Recording
@@ -134,6 +170,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
       mediaRecorderRef.current.stop();
       mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop());
     }
+    mediaRecorderRef.current = null;
     setIsRecording(false);
     setRecordingSeconds(0);
   };
@@ -171,16 +208,19 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
       const attachment = await res.json();
       // attachment = { id, type, url, fileName, fileSize, mimeType }
 
-      const isImg = attachment.type === 'image';
+      const caption = text.trim() || file.name;
       onSendMessage(
-        isImg ? '' : file.name,
-        attachment.type as 'image' | 'file' | 'audio',
+        caption,
+        attachment.type as 'image' | 'video' | 'audio' | 'file',
         {
           url: attachment.url,
           fileName: attachment.fileName,
           fileSize: attachment.fileSize,
         }
       );
+      setText('');
+      onClearReply();
+      soundFX.playSend();
     } catch (err: unknown) {
       console.error('Upload error:', err);
       setUploadError(err instanceof Error ? err.message : 'Upload failed. Try again.');

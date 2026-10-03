@@ -115,7 +115,7 @@ export const GuestShell: React.FC<GuestShellProps> = ({
     }
 
     // Auto-refresh periodically as a fallback
-    const interval = setInterval(fetchConversationData, 6000);
+    const interval = setInterval(fetchConversationData, 3500);
     return () => clearInterval(interval);
   }, [token]);
 
@@ -129,7 +129,7 @@ export const GuestShell: React.FC<GuestShellProps> = ({
   // Send message handler
   const handleSendMessage = async (
     content: string,
-    type: 'text' | 'image' | 'file' | 'audio' = 'text',
+    type: 'text' | 'image' | 'video' | 'file' | 'audio' = 'text',
     fileData?: { url: string; fileName: string; fileSize: number; duration?: number }
   ) => {
     const tempId = `msg_${Date.now()}`;
@@ -147,7 +147,14 @@ export const GuestShell: React.FC<GuestShellProps> = ({
               url: fileData.url,
               fileName: fileData.fileName,
               fileSize: fileData.fileSize,
-              mimeType: type === 'image' ? 'image/jpeg' : type === 'audio' ? 'audio/mp4' : 'application/octet-stream',
+              mimeType:
+                type === 'image'
+                  ? 'image/jpeg'
+                  : type === 'video'
+                  ? 'video/mp4'
+                  : type === 'audio'
+                  ? 'audio/mp4'
+                  : 'application/octet-stream',
               duration: fileData.duration,
             },
           ]

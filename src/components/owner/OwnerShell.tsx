@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { User, Conversation, Message, ReplyContext } from '../../types';
 import { OwnerInbox } from '../OwnerInbox';
 import { ChatHeader } from '../ChatHeader';
@@ -141,10 +141,18 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
 
     const interval = setInterval(() => {
       fetchConversations();
-    }, 6000);
+      if (activeConversationIdRef.current) {
+        fetchMessagesForConv(activeConversationIdRef.current);
+      }
+    }, 3500);
 
     return () => clearInterval(interval);
   }, [token]);
+
+  const activeConversationIdRef = useRef(activeConversationId);
+  useEffect(() => {
+    activeConversationIdRef.current = activeConversationId;
+  }, [activeConversationId]);
 
   // When active conversation changes, fetch its messages and join room
   useEffect(() => {
@@ -202,7 +210,7 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
   // Send Message
   const handleSendMessage = async (
     content: string,
-    type: 'text' | 'image' | 'file' | 'audio' = 'text',
+    type: 'text' | 'image' | 'video' | 'file' | 'audio' = 'text',
     fileData?: { url: string; fileName: string; fileSize: number; duration?: number }
   ) => {
     if (!activeConversationId) return;
@@ -222,7 +230,14 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
               url: fileData.url,
               fileName: fileData.fileName,
               fileSize: fileData.fileSize,
-              mimeType: type === 'image' ? 'image/jpeg' : type === 'audio' ? 'audio/mp4' : 'application/octet-stream',
+              mimeType:
+                type === 'image'
+                  ? 'image/jpeg'
+                  : type === 'video'
+                  ? 'video/mp4'
+                  : type === 'audio'
+                  ? 'audio/mp4'
+                  : 'application/octet-stream',
               duration: fileData.duration,
             },
           ]

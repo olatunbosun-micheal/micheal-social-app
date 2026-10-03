@@ -7,7 +7,7 @@ const router = Router();
 
 const SendMessageSchema = z.object({
   type: z.enum(['text', 'image', 'video', 'audio', 'file', 'system']).default('text'),
-  content: z.string().min(1, 'Message content cannot be empty'),
+  content: z.string().default(''),
   attachments: z.array(z.object({
     id: z.string(),
     type: z.enum(['image', 'video', 'audio', 'file']),
@@ -18,7 +18,10 @@ const SendMessageSchema = z.object({
     duration: z.number().optional(),
   })).optional(),
   replyToId: z.string().optional(),
-});
+}).refine(
+  (data) => (data.content && data.content.trim().length > 0) || (data.attachments && data.attachments.length > 0),
+  { message: 'Message must have content or at least one attachment' }
+);
 
 // List conversations visible to authenticated user
 router.get('/', authenticateJWT, (req: AuthenticatedRequest, res: Response) => {
