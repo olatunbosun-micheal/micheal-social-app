@@ -229,6 +229,55 @@ export class ChatService {
 
     return true;
   }
+
+  // Clear all messages in conversation
+  public clearConversation(conversationId: string, user: UserRecord): boolean {
+    const conv = assertConversationAccess(conversationId, user);
+    if (!conv) {
+      throw new Error('Forbidden. You do not have access to this conversation.');
+    }
+
+    db.clearMessagesByConversation(conversationId, user.id, user.role === 'owner');
+
+    // Reset unread counts
+    db.updateConversation(conversationId, {
+      unreadCountOwner: 0,
+      unreadCountGuest: 0,
+    });
+
+    broadcastToConversation(conversationId, {
+      event: 'conversation.cleared',
+      data: { conversationId, clearedBy: user.id },
+    });
+
+    return true;
+  }
+
+  // Update conversation settings (archive, pin, unread count)
+  public updateConversationSettings(
+    conversationId: string,
+    user: UserRecord,
+    updates: { isArchived?: boolean; isPinned?: boolean; unreadCount?: number }
+  ): ConversationRecord {
+    const conv = assertConversationAccess(conversationId, user);
+    if (!conv) {
+      throw new Error('Forbidden. You do not have access to this conversation.');
+    }
+
+    const dbUpdates: Partial<ConversationRecord> = {};
+    if (updates.isArchived !== undefined) dbUpdates.isArchived = updates.isArchived;
+    if (updates.isPinned !== undefined) dbUpdates.isPinned = updates.isPinned;
+    if (updates.unreadCount !== undefined) {
+      if (user.role === 'owner') {
+        dbUpdates.unreadCountOwner = updates.unreadCount;
+      } else {
+        dbUpdates.unreadCountGuest = updates.unreadCount;
+      }
+    }
+
+    const updated = db.updateConversation(conversationId, dbUpdates);
+    return updated!;
+  }
 }
 
 export const chatService = new ChatService();

@@ -4,7 +4,7 @@
       "id": "user_micheal",
       "name": "Micheal",
       "email": "kilogbede19@gmail.com",
-      "passwordHash": "$2b$10$ArXLVb5o6PBnJPXpUjQLuu/cqlVbUihW3bLcdxYOqBXx02t71LLU2",
+      "passwordHash": "$2b$10$YL2MJCOJesQqdnv1XvvOHO1PzAuuLhWn2cqJCru9b9Yg9RxTtDrKm",
       "role": "owner",
       "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
       "statusMessage": "Available for private 1-on-1 briefings & discussions",
@@ -12,7 +12,7 @@
       "isOnline": true,
       "lastSeen": "online",
       "createdAt": "2026-10-03T22:45:22.303Z",
-      "updatedAt": "2026-10-04T03:30:07.081Z"
+      "updatedAt": "2026-10-04T04:15:20.545Z"
     },
     {
       "id": "user_1791068230528_3kdy2",
@@ -57,7 +57,7 @@
       "isPinned": false,
       "lastMessageAt": "2026-10-03T23:16:32.403Z",
       "createdAt": "2026-10-03T22:57:10.531Z",
-      "updatedAt": "2026-10-04T03:30:46.577Z"
+      "updatedAt": "2026-10-04T04:14:56.553Z"
     }
   ],
   "messages": [

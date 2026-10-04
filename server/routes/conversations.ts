@@ -69,4 +69,35 @@ router.post('/:id/messages', authenticateJWT, (req: AuthenticatedRequest, res: R
   }
 });
 
+// Clear conversation chat history
+router.delete('/:id/messages', authenticateJWT, (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    chatService.clearConversation(id, req.user!);
+    res.json({ success: true, conversationId: id });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Failed to clear chat';
+    res.status(403).json({ error: msg });
+  }
+});
+
+const UpdateConversationSchema = z.object({
+  isArchived: z.boolean().optional(),
+  isPinned: z.boolean().optional(),
+  unreadCount: z.number().optional(),
+});
+
+// Update conversation settings (archive, pin, unread count)
+router.patch('/:id', authenticateJWT, (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const validated = UpdateConversationSchema.parse(req.body);
+    const updated = chatService.updateConversationSettings(id, req.user!, validated);
+    res.json({ conversation: updated });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Failed to update conversation';
+    res.status(400).json({ error: msg });
+  }
+});
+
 export default router;

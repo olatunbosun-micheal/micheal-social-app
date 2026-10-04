@@ -11,6 +11,8 @@ interface ChatHeaderProps {
   theme?: string;
   onToggleTheme?: () => void;
   onStartCall?: (isVideo: boolean) => void;
+  currentUser?: User;
+  onOpenProfile?: () => void;
 }
 
 export const ChatHeader: React.FC<ChatHeaderProps> = ({
@@ -22,6 +24,8 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   theme,
   onToggleTheme,
   onStartCall,
+  currentUser,
+  onOpenProfile,
 }) => {
   return (
     <div className="chat-header">
@@ -108,6 +112,60 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         >
           <MoreVertical size={20} />
         </button>
+
+        {currentUser && onOpenProfile && (
+          <button
+            className="chat-header-profile-btn"
+            onClick={onOpenProfile}
+            title={`Account: ${currentUser.name} (${currentUser.gender || 'User'}) — Profile & Settings`}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              background: 'var(--bg-active)',
+              border: '1px solid var(--border-strong)',
+              borderRadius: 'var(--radius-sm)',
+              padding: '3px 8px 3px 4px',
+              cursor: 'pointer',
+              marginLeft: 4,
+            }}
+          >
+            <div
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: '50%',
+                overflow: 'hidden',
+                background: 'var(--accent-primary)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 10,
+                fontWeight: 700,
+                color: '#fff',
+              }}
+            >
+              {currentUser.avatar ? (
+                <img src={currentUser.avatar} alt={currentUser.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                currentUser.name[0]
+              )}
+            </div>
+            <span
+              style={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: 'var(--text-primary)',
+                maxWidth: 72,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {currentUser.name.split(' ')[0]}
+            </span>
+          </button>
+        )}
       </div>
     </div>
   );

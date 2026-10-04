@@ -52,11 +52,14 @@ export const CallModal: React.FC<CallModalProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
   const [mediaError, setMediaError] = useState<string | null>(null);
+  const [declineMessage, setDeclineMessage] = useState<string | null>(null);
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteStreamRef = useRef<MediaStream | null>(null);
   const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
+  const pendingOfferRef = useRef<string | null>(null);
+  const callStatusRef = useRef<CallSession['status']>(session.status);
   const durationRef = useRef(0);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
@@ -67,6 +70,7 @@ export const CallModal: React.FC<CallModalProps> = ({
   // Sync internal call status with prop updates
   useEffect(() => {
     setCallStatus(session.status);
+    callStatusRef.current = session.status;
   }, [session.status]);
 
   // Format call duration MM:SS
@@ -148,12 +152,12 @@ export const CallModal: React.FC<CallModalProps> = ({
       // 1. Play audio via dedicated HTMLAudioElement
       if (remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = stream;
-        remoteAudioRef.current.volume = 1.0;
+        remoteAudioRef.current.volume = isSpeakerMuted ? 0 : 1.0;
         remoteAudioRef.current.muted = isSpeakerMuted;
         const playPromise = remoteAudioRef.current.play();
         if (playPromise !== undefined) {
           playPromise.catch((err) => {
-            console.warn('Audio autoplay blocked by browser policy, unlocking on click:', err);
+            console.warn('Audio autoplay blocked by browser policy, unlocking on interaction:', err);
             const unlock = () => {
               remoteAudioRef.current?.play().catch(() => {});
               window.removeEventListener('click', unlock);
@@ -165,10 +169,11 @@ export const CallModal: React.FC<CallModalProps> = ({
         }
       }
 
-      // 2. Play video via HTMLVideoElement (muted to prevent feedback & browser autoplay pause)
+      // 2. Play video via HTMLVideoElement (unmuted so sound is heard directly)
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = stream;
-        remoteVideoRef.current.muted = true;
+        remoteVideoRef.current.muted = false; // UNMUTED: Audio is heard clearly
+        remoteVideoRef.current.volume = isSpeakerMuted ? 0 : 1.0;
         const vidPromise = remoteVideoRef.current.play();
         if (vidPromise !== undefined) {
           vidPromise.catch((err) => {
@@ -184,7 +189,11 @@ export const CallModal: React.FC<CallModalProps> = ({
     pc.onconnectionstatechange = () => {
       console.log('PeerConnection state:', pc.connectionState);
       if (pc.connectionState === 'connected') {
-        setCallStatus('connected');
+        // Only set connected if user is not in ringing stage waiting to accept
+        if (callStatusRef.current !== 'ringing') {
+          setCallStatus('connected');
+          callStatusRef.current = 'connected';
+        }
       } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
         handleEndCall();
       }
@@ -225,7 +234,6 @@ export const CallModal: React.FC<CallModalProps> = ({
       return stream;
     } catch (err: unknown) {
       console.warn('Could not acquire media with video, falling back to audio:', err);
-      // Fallback to audio-only if video fails (e.g. no camera attached)
       try {
         const audioStream = await navigator.mediaDevices.getUserMedia({
           audio: {
@@ -300,6 +308,14 @@ export const CallModal: React.FC<CallModalProps> = ({
 
       try {
         if (signal.type === 'offer' && signal.sdp) {
+          // If receiving an offer while user is still hearing ringtone (has not accepted yet):
+          // BUFFER the offer! Do NOT auto-answer!
+          if (callStatusRef.current === 'ringing') {
+            console.log('Incoming offer buffered; waiting for recipient to click Accept');
+            pendingOfferRef.current = signal.sdp;
+            return;
+          }
+
           const stream = localStreamRef.current || (await acquireLocalMedia(session.isVideo));
           if (stream) {
             stream.getTracks().forEach((track) => {
@@ -324,6 +340,7 @@ export const CallModal: React.FC<CallModalProps> = ({
           await pc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: signal.sdp }));
           await drainPendingCandidates(pc);
           setCallStatus('connected');
+          callStatusRef.current = 'connected';
         } else if (signal.type === 'candidate' && signal.candidate) {
           try {
             if (pc.remoteDescription && pc.remoteDescription.type) {
@@ -343,6 +360,7 @@ export const CallModal: React.FC<CallModalProps> = ({
     // Listen for call accepted
     const handleCallAccepted = async () => {
       setCallStatus('connected');
+      callStatusRef.current = 'connected';
       soundFX.stopRingtone();
       const pc = initPeerConnection();
 
@@ -374,23 +392,36 @@ export const CallModal: React.FC<CallModalProps> = ({
       }
     };
 
-    // Listen for call ended / rejected
-    const handleCallEnded = () => {
-      setCallStatus('ended');
+    // Listen for call rejected by peer
+    const handleCallRejected = () => {
+      soundFX.stopRingtone();
       soundFX.playCallEnd();
-      setTimeout(cleanupAndClose, 1200);
+      setCallStatus('ended');
+      callStatusRef.current = 'ended';
+      setDeclineMessage(`${session.targetUser.name} declined the call`);
+      setTimeout(cleanupAndClose, 2500);
+    };
+
+    // Listen for call ended / terminated
+    const handleCallEnded = () => {
+      soundFX.stopRingtone();
+      soundFX.playCallEnd();
+      setCallStatus('ended');
+      callStatusRef.current = 'ended';
+      setDeclineMessage('Call ended');
+      setTimeout(cleanupAndClose, 1500);
     };
 
     realtimeClient.on('call.signal', handleSignal);
     realtimeClient.on('call.accepted', handleCallAccepted);
-    realtimeClient.on('call.rejected', handleCallEnded);
+    realtimeClient.on('call.rejected', handleCallRejected);
     realtimeClient.on('call.ended', handleCallEnded);
 
     return () => {
       isSubscribed = false;
       realtimeClient.off('call.signal', handleSignal);
       realtimeClient.off('call.accepted', handleCallAccepted);
-      realtimeClient.off('call.rejected', handleCallEnded);
+      realtimeClient.off('call.rejected', handleCallRejected);
       realtimeClient.off('call.ended', handleCallEnded);
     };
   }, []);
@@ -414,6 +445,7 @@ export const CallModal: React.FC<CallModalProps> = ({
 
   // End call trigger with duration and status logging
   const handleEndCall = () => {
+    soundFX.stopRingtone();
     soundFX.playCallEnd();
     const finalDuration = durationRef.current;
     const finalStatus = finalDuration > 0 ? 'completed' : (session.direction === 'outgoing' ? 'cancelled' : 'missed');
@@ -426,24 +458,31 @@ export const CallModal: React.FC<CallModalProps> = ({
       status: finalStatus,
     });
     setCallStatus('ended');
-    setTimeout(cleanupAndClose, 1000);
+    callStatusRef.current = 'ended';
+    setDeclineMessage(finalDuration > 0 ? 'Call ended' : 'Call cancelled');
+    setTimeout(cleanupAndClose, 1200);
   };
 
   // Reject call trigger
   const handleRejectCall = () => {
+    soundFX.stopRingtone();
     soundFX.playCallEnd();
     realtimeClient.rejectCall({
       targetUserId: session.targetUser.id,
       conversationId: session.conversationId,
       isVideo: session.isVideo,
+      reason: 'declined',
     });
     setCallStatus('ended');
-    setTimeout(cleanupAndClose, 1000);
+    callStatusRef.current = 'ended';
+    setDeclineMessage('Call declined');
+    setTimeout(cleanupAndClose, 2500);
   };
 
   // Accept incoming call trigger
   const handleAccept = async (video: boolean) => {
     setCallStatus('connected');
+    callStatusRef.current = 'connected';
     soundFX.stopRingtone();
     setIsVideoEnabled(video);
 
@@ -465,6 +504,23 @@ export const CallModal: React.FC<CallModalProps> = ({
       conversationId: session.conversationId,
       isVideo: video,
     });
+
+    // If an SDP offer was buffered while ringing, now process and answer it!
+    if (pendingOfferRef.current) {
+      try {
+        await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: pendingOfferRef.current }));
+        await drainPendingCandidates(pc);
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        realtimeClient.sendCallSignal({
+          targetUserId: session.targetUser.id,
+          signal: { type: 'answer', sdp: answer.sdp },
+        });
+        pendingOfferRef.current = null;
+      } catch (e) {
+        console.error('Failed to answer buffered offer on accept:', e);
+      }
+    }
   };
 
   // Toggle Mute Audio
@@ -780,19 +836,40 @@ export const CallModal: React.FC<CallModalProps> = ({
                 )}
               </div>
 
-              <div
-                style={{
-                  fontSize: 13,
-                  color: 'var(--text-secondary)',
-                  marginTop: 6,
-                  fontFamily: 'var(--font-mono)',
-                }}
-              >
-                {callStatus === 'calling' && 'Calling direct line...'}
-                {callStatus === 'ringing' && 'Incoming call...'}
-                {callStatus === 'connected' && formatDuration(duration)}
-                {callStatus === 'ended' && 'Call terminated'}
-              </div>
+              {declineMessage ? (
+                <div
+                  style={{
+                    marginTop: 12,
+                    padding: '8px 16px',
+                    borderRadius: 'var(--radius-sm)',
+                    background: 'rgba(239, 68, 68, 0.16)',
+                    border: '1px solid rgba(239, 68, 68, 0.4)',
+                    color: '#ef4444',
+                    fontWeight: 700,
+                    fontSize: 13.5,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                  }}
+                >
+                  <PhoneOff size={15} />
+                  <span>{declineMessage}</span>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    fontSize: 13,
+                    color: 'var(--text-secondary)',
+                    marginTop: 6,
+                    fontFamily: 'var(--font-mono)',
+                  }}
+                >
+                  {callStatus === 'calling' && 'Calling direct line...'}
+                  {callStatus === 'ringing' && 'Incoming call...'}
+                  {callStatus === 'connected' && formatDuration(duration)}
+                  {callStatus === 'ended' && 'Call terminated'}
+                </div>
+              )}
             </div>
           )}
         </div>

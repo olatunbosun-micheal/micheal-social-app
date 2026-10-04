@@ -27,8 +27,23 @@ export class AuthService {
       throw new Error('An account with this email address already exists.');
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
-    const now = new Date().toISOString();
+    const MALE_AVATARS = [
+      'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=85',
+      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=85',
+      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=85',
+      'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&auto=format&fit=crop&q=85',
+    ];
+
+    const FEMALE_AVATARS = [
+      'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=85',
+      'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&auto=format&fit=crop&q=85',
+      'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=85',
+      'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&auto=format&fit=crop&q=85',
+    ];
+
+    const gender = (params as any).gender === 'female' ? 'female' : 'male';
+    const avatarPool = gender === 'female' ? FEMALE_AVATARS : MALE_AVATARS;
+    const selectedAvatar = (params as any).avatar || avatarPool[Math.floor(Math.random() * avatarPool.length)];
 
     const newUser: UserRecord = {
       id: `user_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
@@ -36,7 +51,8 @@ export class AuthService {
       email: email.trim().toLowerCase(),
       passwordHash,
       role: 'guest',
-      avatar: `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80`,
+      gender,
+      avatar: selectedAvatar,
       statusMessage: 'Joined via personal invitation',
       isBlocked: false,
       isOnline: true,

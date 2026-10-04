@@ -259,6 +259,10 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                   {loading ? 'Authenticating...' : 'Enter Gateway'}
                   <ArrowRight size={14} strokeWidth={2} />
                 </button>
+
+                <p className="land-spec-desc" style={{ marginTop: 10, textAlign: 'center', fontSize: 11.5 }}>
+                  Invited guest? Sign in with the email and password you created during invite setup.
+                </p>
               </form>
             ) : (
               <form className="land-form" onSubmit={handleInviteSubmit}>

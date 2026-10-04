@@ -7,6 +7,7 @@ export interface UserRecord {
   passwordHash: string;
   role: UserRole;
   avatar: string;
+  gender?: 'male' | 'female';
   statusMessage?: string;
   isBlocked: boolean;
   isOnline: boolean;

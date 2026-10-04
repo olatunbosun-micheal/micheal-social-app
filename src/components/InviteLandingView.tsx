@@ -28,6 +28,7 @@ export const InviteLandingView: React.FC<InviteLandingViewProps> = ({
 
   const [step, setStep] = useState<'welcome' | 'register'>('welcome');
   const [name, setName] = useState('');
+  const [gender, setGender] = useState<'male' | 'female'>('male');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -67,6 +68,7 @@ export const InviteLandingView: React.FC<InviteLandingViewProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: name.trim(),
+          gender,
           email: email.trim(),
           password,
           inviteCode,
@@ -204,6 +206,52 @@ export const InviteLandingView: React.FC<InviteLandingViewProps> = ({
                 onChange={(e) => setName(e.target.value)}
                 autoComplete="name"
               />
+            </div>
+          </div>
+
+          <div className="land-field">
+            <label className="land-label">Gender (for profile picture)</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 4 }}>
+              <button
+                type="button"
+                onClick={() => setGender('male')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  padding: '10px 14px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: gender === 'male' ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
+                  background: gender === 'male' ? 'rgba(79, 126, 255, 0.12)' : 'var(--bg-card)',
+                  color: gender === 'male' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  fontWeight: gender === 'male' ? 600 : 500,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <span>👨 Male</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setGender('female')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  padding: '10px 14px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: gender === 'female' ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
+                  background: gender === 'female' ? 'rgba(79, 126, 255, 0.12)' : 'var(--bg-card)',
+                  color: gender === 'female' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  fontWeight: gender === 'female' ? 600 : 500,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <span>👩 Female</span>
+              </button>
             </div>
           </div>
 

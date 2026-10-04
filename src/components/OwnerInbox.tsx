@@ -1,6 +1,21 @@
 import React, { useState } from 'react';
 import type { Conversation, Message } from '../types';
-import { Search, SlidersHorizontal, Image, Mic, FileText, Pin, UserPlus, Download, Phone, Video } from 'lucide-react';
+import {
+  Search,
+  SlidersHorizontal,
+  Image,
+  Mic,
+  FileText,
+  Pin,
+  UserPlus,
+  Download,
+  Phone,
+  Video,
+  Archive,
+  ArchiveRestore,
+  CheckCheck,
+  Mail,
+} from 'lucide-react';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { PWAInstallModal } from './PWAInstallModal';
 
@@ -8,6 +23,8 @@ interface OwnerInboxProps {
   conversations: Conversation[];
   activeConversationId: string;
   onSelectConversation: (convId: string) => void;
+  onToggleArchive?: (convId: string, isArchived: boolean) => void;
+  onToggleUnread?: (convId: string, currentUnread: number) => void;
   lastMessages: Record<string, Message | undefined>;
   typingUsers: Record<string, boolean>;
   onOpenSettings?: () => void;
@@ -18,6 +35,8 @@ export const OwnerInbox: React.FC<OwnerInboxProps> = ({
   conversations,
   activeConversationId,
   onSelectConversation,
+  onToggleArchive,
+  onToggleUnread,
   lastMessages,
   typingUsers,
   onOpenInviteModal,
@@ -209,10 +228,54 @@ export const OwnerInbox: React.FC<OwnerInboxProps> = ({
                       )}
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       {conv.isPinned && <Pin size={12} color="var(--text-muted)" />}
                       {conv.unreadCount > 0 && (
                         <div className="unread-badge">{conv.unreadCount}</div>
+                      )}
+                      {onToggleUnread && (
+                        <button
+                          type="button"
+                          className="icon-action-btn"
+                          style={{
+                            width: 22,
+                            height: 22,
+                            padding: 0,
+                            borderRadius: 'var(--radius-sm)',
+                            border: '1px solid var(--border-subtle)',
+                            background: 'transparent',
+                            color: conv.unreadCount > 0 ? 'var(--accent-primary)' : 'var(--text-muted)',
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleUnread(conv.id, conv.unreadCount);
+                          }}
+                          title={conv.unreadCount > 0 ? 'Mark as read' : 'Mark as unread'}
+                        >
+                          {conv.unreadCount > 0 ? <CheckCheck size={12} /> : <Mail size={12} />}
+                        </button>
+                      )}
+                      {onToggleArchive && (
+                        <button
+                          type="button"
+                          className="icon-action-btn"
+                          style={{
+                            width: 22,
+                            height: 22,
+                            padding: 0,
+                            borderRadius: 'var(--radius-sm)',
+                            border: '1px solid var(--border-subtle)',
+                            background: 'transparent',
+                            color: conv.isArchived ? 'var(--accent-primary)' : 'var(--text-muted)',
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleArchive(conv.id, !!conv.isArchived);
+                          }}
+                          title={conv.isArchived ? 'Unarchive chat' : 'Archive chat'}
+                        >
+                          {conv.isArchived ? <ArchiveRestore size={12} /> : <Archive size={12} />}
+                        </button>
                       )}
                     </div>
                   </div>

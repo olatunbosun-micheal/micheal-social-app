@@ -210,6 +210,22 @@ class DatabaseEngine {
     this.save();
     return msg;
   }
+
+  public clearMessagesByConversation(conversationId: string, userId?: string, forEveryone: boolean = true): void {
+    if (forEveryone) {
+      this.data.messages = this.data.messages.filter((m) => m.conversationId !== conversationId);
+    } else if (userId) {
+      this.data.messages.forEach((m) => {
+        if (m.conversationId === conversationId) {
+          if (!m.deletedForUserIds) m.deletedForUserIds = [];
+          if (!m.deletedForUserIds.includes(userId)) {
+            m.deletedForUserIds.push(userId);
+          }
+        }
+      });
+    }
+    this.save();
+  }
 }
 
 export const db = new DatabaseEngine();

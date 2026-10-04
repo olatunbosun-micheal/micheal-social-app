@@ -170,6 +170,14 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
         setTypingUsers((prev) => ({ ...prev, [userId]: false }));
       });
 
+      realtimeClient.on('conversation.cleared', ({ conversationId }: { conversationId: string }) => {
+        setMessages((prev) => ({
+          ...prev,
+          [conversationId]: [],
+        }));
+        fetchConversations();
+      });
+
       realtimeClient.on('call.start', (data: { fromUserId: string; conversationId: string; isVideo: boolean; callerName: string; callerAvatar?: string }) => {
         const callerUser: User = conversations.find((c) => c.guestUser.id === data.fromUserId)?.guestUser || {
           id: data.fromUserId,
@@ -393,6 +401,48 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
     }
   };
 
+  const handleToggleArchive = async (convId: string, currentArchived: boolean) => {
+    const nextArchived = !currentArchived;
+    setConversations((prev) =>
+      prev.map((c) => (c.id === convId ? { ...c, isArchived: nextArchived } : c))
+    );
+    if (token) {
+      try {
+        await fetch(`${API_BASE}/conversations/${convId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ isArchived: nextArchived }),
+        });
+      } catch (err) {
+        console.warn('Failed to toggle archive:', err);
+      }
+    }
+  };
+
+  const handleToggleUnread = async (convId: string, currentUnread: number) => {
+    const nextUnread = currentUnread > 0 ? 0 : 1;
+    setConversations((prev) =>
+      prev.map((c) => (c.id === convId ? { ...c, unreadCount: nextUnread } : c))
+    );
+    if (token) {
+      try {
+        await fetch(`${API_BASE}/conversations/${convId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ unreadCount: nextUnread }),
+        });
+      } catch (err) {
+        console.warn('Failed to toggle unread:', err);
+      }
+    }
+  };
+
   const showSidebar = !isMobileScreen || mobileView === 'inbox';
   const showChat = !isMobileScreen || mobileView === 'chat';
 
@@ -447,6 +497,8 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
               setMobileView('chat');
               fetchMessagesForConv(id);
             }}
+            onToggleArchive={handleToggleArchive}
+            onToggleUnread={handleToggleUnread}
             lastMessages={Object.fromEntries(
               conversations.map((c) => [c.id, messages[c.id]?.[messages[c.id]?.length - 1]])
             )}
@@ -543,9 +595,18 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
             messages={currentMessages}
             onClose={() => setIsDrawerOpen(false)}
             onToggleBlockUser={() => {}}
-            onClearChat={() => {
-              if (activeConversationId) {
-                setMessages((prev) => ({ ...prev, [activeConversationId]: [] }));
+            onClearChat={async () => {
+              if (activeId && token) {
+                setMessages((prev) => ({ ...prev, [activeId]: [] }));
+                try {
+                  await fetch(`${API_BASE}/conversations/${activeId}/messages`, {
+                    method: 'DELETE',
+                    headers: { Authorization: `Bearer ${token}` },
+                  });
+                  fetchConversations();
+                } catch (err) {
+                  console.warn('Failed to clear chat:', err);
+                }
               }
               setIsDrawerOpen(false);
             }}

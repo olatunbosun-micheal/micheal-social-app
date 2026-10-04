@@ -148,6 +148,12 @@ export const GuestShell: React.FC<GuestShellProps> = ({
         }
       });
 
+      realtimeClient.on('conversation.cleared', ({ conversationId: clearedId }: { conversationId: string }) => {
+        if (clearedId === conversationId) {
+          setMessages([]);
+        }
+      });
+
       realtimeClient.on('presence.updated', ({ userId, isOnline, lastSeen }: { userId: string; isOnline: boolean; lastSeen: string }) => {
         if (userId === ownerUser.id) {
           setOwnerUser((prev) => ({ ...prev, isOnline, lastSeen }));
@@ -324,6 +330,8 @@ export const GuestShell: React.FC<GuestShellProps> = ({
           theme={theme}
           onToggleTheme={onToggleTheme}
           onStartCall={handleStartCall}
+          currentUser={currentUser}
+          onOpenProfile={() => setIsProfileModalOpen(true)}
         />
 
         {/* Message Stream */}
@@ -389,7 +397,20 @@ export const GuestShell: React.FC<GuestShellProps> = ({
             messages={messages}
             onClose={() => setIsDrawerOpen(false)}
             onToggleBlockUser={() => {}}
-            onClearChat={() => setMessages([])}
+            onClearChat={async () => {
+              if (conversationId && token) {
+                setMessages([]);
+                try {
+                  await fetch(`${API_BASE}/conversations/${conversationId}/messages`, {
+                    method: 'DELETE',
+                    headers: { Authorization: `Bearer ${token}` },
+                  });
+                } catch (err) {
+                  console.warn('Failed to clear chat:', err);
+                }
+              }
+              setIsDrawerOpen(false);
+            }}
             onOpenImage={(url) => setLightboxUrl(url)}
             isCurrentUserOwner={false}
           />
@@ -400,20 +421,68 @@ export const GuestShell: React.FC<GuestShellProps> = ({
           <div className="lightbox-overlay" onClick={() => setIsProfileModalOpen(false)}>
             <div
               className="onboarding-card"
-              style={{ maxWidth: 380, margin: 'auto' }}
+              style={{ maxWidth: 400, margin: 'auto', padding: 24 }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div className="avatar-placeholder" style={{ width: 48, height: 48, fontSize: 20 }}>
-                  {currentUser.name[0]}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent-primary)' }}>
+                  Guest Account &amp; Settings
+                </span>
+                <button
+                  className="icon-action-btn"
+                  onClick={() => setIsProfileModalOpen(false)}
+                  style={{ width: 28, height: 28 }}
+                  title="Close modal"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingBottom: 16, borderBottom: '1px solid var(--border-subtle)' }}>
+                <div
+                  style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: 'var(--radius-sm)',
+                    overflow: 'hidden',
+                    background: 'var(--bg-active)',
+                    border: '1.5px solid var(--border-strong)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 22,
+                    fontWeight: 700,
+                    color: 'var(--text-primary)',
+                    flexShrink: 0,
+                  }}
+                >
+                  {currentUser.avatar ? (
+                    <img src={currentUser.avatar} alt={currentUser.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    currentUser.name[0]
+                  )}
                 </div>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: 16 }}>{currentUser.name}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{currentUser.email}</div>
+                <div style={{ overflow: 'hidden' }}>
+                  <div style={{ fontWeight: 700, fontSize: 17, color: 'var(--text-primary)' }}>{currentUser.name}</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {currentUser.email}
+                  </div>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                    <span style={{ fontSize: 11, background: 'var(--bg-active)', padding: '2px 8px', borderRadius: 4, color: 'var(--text-muted)' }}>
+                      {currentUser.gender === 'female' ? '👩 Female' : '👨 Male'}
+                    </span>
+                    <span style={{ fontSize: 11, background: 'rgba(16, 185, 129, 0.12)', color: 'var(--status-online)', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>
+                      Verified Guest
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+              <div style={{ marginTop: 14, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.45 }}>
+                Direct 1-on-1 private channel with <strong style={{ color: 'var(--text-primary)' }}>{ownerUser.name}</strong>. No other guests can ever see your messages or account.
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
                 {isInstallable && (
                   <button
                     className="control-btn"
@@ -437,12 +506,26 @@ export const GuestShell: React.FC<GuestShellProps> = ({
 
                 <button
                   className="control-btn"
-                  style={{ justifyContent: 'center', padding: '10px', color: 'var(--accent-danger)', borderColor: 'var(--accent-danger)', marginTop: 8 }}
-                  onClick={onLogout}
+                  style={{
+                    justifyContent: 'center',
+                    padding: '11px',
+                    color: 'var(--accent-danger)',
+                    borderColor: 'var(--accent-danger)',
+                    marginTop: 8,
+                    fontWeight: 600,
+                  }}
+                  onClick={() => {
+                    if (window.confirm('Are you sure you want to sign out? You can sign back in later with your email and password.')) {
+                      onLogout();
+                    }
+                  }}
                 >
                   <LogOut size={15} />
-                  <span>Sign Out</span>
+                  <span>Log Out &amp; Return Later</span>
                 </button>
+                <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                  You can log back in at any time from the home page.
+                </div>
               </div>
             </div>
           </div>
