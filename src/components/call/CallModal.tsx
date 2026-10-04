@@ -48,11 +48,15 @@ export const CallModal: React.FC<CallModalProps> = ({
   const [duration, setDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoEnabled, setIsVideoEnabled] = useState(session.isVideo);
+  const [isCallWithVideo, setIsCallWithVideo] = useState(session.isVideo);
   const [isSpeakerMuted, setIsSpeakerMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [declineMessage, setDeclineMessage] = useState<string | null>(null);
+
+  // Dynamic layout: automatically expand to video if either party enables video
+  const isVideoLayout = isCallWithVideo || isVideoEnabled || hasRemoteVideo;
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
@@ -184,6 +188,9 @@ export const CallModal: React.FC<CallModalProps> = ({
 
       const hasVideo = stream.getVideoTracks().length > 0;
       setHasRemoteVideo(hasVideo);
+      if (hasVideo) {
+        setIsCallWithVideo(true);
+      }
     };
 
     pc.onconnectionstatechange = () => {
@@ -324,6 +331,10 @@ export const CallModal: React.FC<CallModalProps> = ({
                 pc.addTrack(track, stream);
               }
             });
+          }
+
+          if (signal.sdp.includes('m=video') || (signal as { hasVideo?: boolean }).hasVideo) {
+            setIsCallWithVideo(true);
           }
 
           await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: signal.sdp }));
@@ -548,15 +559,49 @@ export const CallModal: React.FC<CallModalProps> = ({
     if (!isVideoEnabled) {
       // Turn video on
       try {
-        const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        setIsCallWithVideo(true);
+        const videoStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 1280, max: 1920 },
+            height: { ideal: 720, max: 1080 },
+            facingMode: 'user',
+          },
+        });
         const newTrack = videoStream.getVideoTracks()[0];
-        if (localStreamRef.current && newTrack) {
+        if (newTrack) {
+          if (!localStreamRef.current) {
+            localStreamRef.current = new MediaStream();
+          }
           localStreamRef.current.addTrack(newTrack);
+
           if (localVideoRef.current) {
             localVideoRef.current.srcObject = localStreamRef.current;
           }
-          if (pcRef.current) {
-            pcRef.current.addTrack(newTrack, localStreamRef.current);
+
+          const pc = pcRef.current;
+          if (pc) {
+            const senders = pc.getSenders();
+            const videoSender = senders.find((s) => s.track && s.track.kind === 'video');
+            if (videoSender) {
+              await videoSender.replaceTrack(newTrack);
+            } else {
+              pc.addTrack(newTrack, localStreamRef.current);
+            }
+
+            // Create and send SDP offer to renegotiate video track with peer
+            try {
+              const offer = await pc.createOffer({
+                offerToReceiveAudio: true,
+                offerToReceiveVideo: true,
+              });
+              await pc.setLocalDescription(offer);
+              realtimeClient.sendCallSignal({
+                targetUserId: session.targetUser.id,
+                signal: { type: 'offer', sdp: offer.sdp, hasVideo: true },
+              });
+            } catch (err) {
+              console.warn('Renegotiation offer error:', err);
+            }
           }
         }
         setIsVideoEnabled(true);
@@ -570,9 +615,33 @@ export const CallModal: React.FC<CallModalProps> = ({
         if (videoTrack) {
           videoTrack.stop();
           localStreamRef.current.removeTrack(videoTrack);
+
+          const pc = pcRef.current;
+          if (pc) {
+            const videoSender = pc.getSenders().find((s) => s.track === videoTrack || (s.track && s.track.kind === 'video'));
+            if (videoSender) {
+              pc.removeTrack(videoSender);
+              try {
+                const offer = await pc.createOffer({
+                  offerToReceiveAudio: true,
+                  offerToReceiveVideo: true,
+                });
+                await pc.setLocalDescription(offer);
+                realtimeClient.sendCallSignal({
+                  targetUserId: session.targetUser.id,
+                  signal: { type: 'offer', sdp: offer.sdp, hasVideo: false },
+                });
+              } catch (err) {
+                console.warn('Renegotiation off offer error:', err);
+              }
+            }
+          }
         }
       }
       setIsVideoEnabled(false);
+      if (!hasRemoteVideo) {
+        setIsCallWithVideo(false);
+      }
     }
   };
 
@@ -606,8 +675,8 @@ export const CallModal: React.FC<CallModalProps> = ({
         className="call-modal-container"
         style={{
           width: '100%',
-          maxWidth: session.isVideo ? (isFullscreen ? '100vw' : '880px') : '420px',
-          height: session.isVideo ? (isFullscreen ? '100vh' : '580px') : 'auto',
+          maxWidth: isVideoLayout ? (isFullscreen ? '100vw' : '880px') : '420px',
+          height: isVideoLayout ? (isFullscreen ? '100vh' : '580px') : 'auto',
           background: 'var(--bg-modal)',
           border: '1px solid var(--border-strong)',
           borderRadius: isFullscreen ? 0 : 'var(--radius-lg)',
@@ -653,7 +722,7 @@ export const CallModal: React.FC<CallModalProps> = ({
                   animation: callStatus === 'connected' ? 'none' : 'pulse 1.2s infinite',
                 }}
               />
-              {session.isVideo ? 'Secure Video Link' : 'Direct Audio Feed'}
+              {isVideoLayout ? 'Secure Video Link' : 'Direct Audio Feed'}
             </span>
 
             {callStatus === 'connected' && (
@@ -672,7 +741,7 @@ export const CallModal: React.FC<CallModalProps> = ({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {session.isVideo && (
+            {isVideoLayout && (
               <button
                 className="icon-action-btn"
                 onClick={() => setIsFullscreen(!isFullscreen)}
@@ -711,11 +780,11 @@ export const CallModal: React.FC<CallModalProps> = ({
             justifyContent: 'center',
             background: '#04060a',
             overflow: 'hidden',
-            minHeight: session.isVideo ? 400 : 280,
+            minHeight: isVideoLayout ? 400 : 280,
           }}
         >
           {/* Video Streams */}
-          {session.isVideo && (
+          {isVideoLayout && (
             <>
               {/* Remote Video Stream */}
               <video
@@ -765,7 +834,7 @@ export const CallModal: React.FC<CallModalProps> = ({
           )}
 
           {/* Avatar & Calling Info (shown in Audio call or while connecting/video off) */}
-          {(!session.isVideo || !hasRemoteVideo || callStatus !== 'connected') && (
+          {(!isVideoLayout || !hasRemoteVideo || callStatus !== 'connected') && (
             <div
               style={{
                 display: 'flex',
