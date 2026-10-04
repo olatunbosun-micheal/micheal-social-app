@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowRight, Lock, Mail, Shield, MessageSquare, Key, ShieldCheck, Moon, Sun, Sparkles, Download } from 'lucide-react';
+import { ArrowRight, Lock, Mail, Shield, MessageSquare, Key, ShieldCheck, Moon, Sun, Sparkles, Download, Eye, EyeOff } from 'lucide-react';
 import type { User, ThemeMode } from '../types';
 import { API_BASE } from '../config';
 import { usePWAInstall } from '../hooks/usePWAInstall';
@@ -31,6 +31,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
   const [tab, setTab] = useState<'signin' | 'invite'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [inviteCodeInput, setInviteCodeInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -214,11 +215,33 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                 </div>
 
                 <div className="land-field">
-                  <label className="land-label">Password</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label className="land-label">Password</label>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      style={{
+                        fontSize: '11px',
+                        color: 'var(--text-muted)',
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '2px 4px',
+                        fontFamily: 'var(--font-mono)',
+                      }}
+                      title={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff size={12} /> : <Eye size={12} />}
+                      <span>{showPassword ? 'Hide' : 'Show'}</span>
+                    </button>
+                  </div>
                   <div className="land-input-row">
                     <Lock size={14} className="land-input-icon" />
                     <input
-                      type="password"
+                      type={showPassword ? 'text' : 'password'}
                       required
                       className="land-input"
                       placeholder="Enter password"

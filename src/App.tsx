@@ -31,6 +31,14 @@ export const App: React.FC = () => {
   // Check existing session token on mount
   useEffect(() => {
     const checkAuth = async () => {
+      if (typeof window !== 'undefined' && window.location.search.includes('logout')) {
+        localStorage.removeItem('gateway_token');
+        window.history.replaceState({}, '', '/');
+        setCurrentUser(null);
+        setAuthChecked(true);
+        return;
+      }
+
       const token = localStorage.getItem('gateway_token');
       if (!token) {
         setAuthChecked(true);
