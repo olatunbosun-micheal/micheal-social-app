@@ -137,6 +137,18 @@ export const GuestShell: React.FC<GuestShellProps> = ({
 
           return [...prev, newMsg];
         });
+
+        // If guest is in the app, reset unread count on backend
+        if (token && conversationId) {
+          fetch(`${API_BASE}/conversations/${conversationId}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ unreadCount: 0 }),
+          }).catch(() => {});
+        }
       });
 
       realtimeClient.on('typing.started', ({ userId }: { userId: string }) => {
@@ -193,6 +205,9 @@ export const GuestShell: React.FC<GuestShellProps> = ({
   useEffect(() => {
     if (conversationId) {
       realtimeClient.joinConversation(conversationId);
+      realtimeClient.setActiveRoom(conversationId, true);
+    } else {
+      realtimeClient.setActiveRoom(null, false);
     }
   }, [conversationId]);
 

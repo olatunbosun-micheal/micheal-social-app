@@ -9,6 +9,26 @@ class RealtimeClient {
   private currentUserId: string | null = null;
   private reconnectTimer: any = null;
   private activeRoom: string | null = null;
+  private isChatOpen: boolean = true;
+
+  public setActiveRoom(room: string | null, isChatOpen: boolean = true) {
+    this.activeRoom = room;
+    this.isChatOpen = isChatOpen;
+  }
+
+  public isUserActivelyViewing(conversationId?: string): boolean {
+    if (typeof document === 'undefined') return false;
+    // Tab minimized, backgrounded, or screen locked
+    if (document.visibilityState !== 'visible') return false;
+    // Browser window not focused
+    if (typeof document.hasFocus === 'function' && !document.hasFocus()) return false;
+    // If a specific conversation is checked, verify user is in that conversation and viewing chat
+    if (conversationId) {
+      if (this.activeRoom !== conversationId) return false;
+      if (!this.isChatOpen) return false;
+    }
+    return true;
+  }
 
   public setCurrentUserId(userId: string) {
     this.currentUserId = userId;
@@ -98,8 +118,12 @@ class RealtimeClient {
             const isOwnMessage = this.currentUserId && msg && msg.senderId === this.currentUserId;
 
             if (!isOwnMessage) {
-              soundFX.playReceive();
-              this.showPushNotification(msg);
+              const isActivelyReading = this.isUserActivelyViewing(msg?.conversationId);
+              // IF USER IS ALREADY VIEWING / READING THE MESSAGE: NO NOTIFICATION NEEDED
+              if (!isActivelyReading) {
+                soundFX.playReceive();
+                this.showPushNotification(msg);
+              }
             }
           }
 

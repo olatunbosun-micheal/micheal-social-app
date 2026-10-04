@@ -64,13 +64,18 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
       if (res.ok) {
         const data = await res.json();
         if (data.conversations) {
-          setConversations(data.conversations);
+          const isActivelyViewing = !isMobileScreen || mobileView === 'chat';
+          const currentActive = activeConversationIdRef.current;
+          const sanitized = data.conversations.map((c: any) =>
+            isActivelyViewing && c.id === currentActive ? { ...c, unreadCount: 0 } : c
+          );
+          setConversations(sanitized);
           setActiveConversationId((prev) => {
             // Keep currently viewed conversation if it exists in the list
-            if (prev && data.conversations.some((c: any) => c.id === prev)) {
+            if (prev && sanitized.some((c: any) => c.id === prev)) {
               return prev;
             }
-            return data.conversations.length > 0 ? data.conversations[0].id : '';
+            return sanitized.length > 0 ? sanitized[0].id : '';
           });
         }
       }
@@ -158,6 +163,22 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
           };
         });
 
+        // If owner is actively looking at this conversation, immediately mark it as read on backend
+        const isActivelyViewing =
+          activeConversationIdRef.current === newMsg.conversationId &&
+          (!isMobileScreen || mobileView === 'chat');
+
+        if (isActivelyViewing && token) {
+          fetch(`${API_BASE}/conversations/${newMsg.conversationId}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ unreadCount: 0 }),
+          }).catch(() => {});
+        }
+
         // Refetch conversations to update timestamps & unread counts
         fetchConversations();
       });
@@ -225,14 +246,18 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
     activeConversationIdRef.current = activeConversationId;
   }, [activeConversationId]);
 
-  // When active conversation changes, fetch its messages and join room
+  // When active conversation or mobile view changes, update realtime client room & viewing state
   useEffect(() => {
+    const isChatOpen = !isMobileScreen || mobileView === 'chat';
     if (activeConversationId) {
       activeConversationIdRef.current = activeConversationId;
       realtimeClient.joinConversation(activeConversationId);
+      realtimeClient.setActiveRoom(activeConversationId, isChatOpen);
       fetchMessagesForConv(activeConversationId);
+    } else {
+      realtimeClient.setActiveRoom(null, false);
     }
-  }, [activeConversationId]);
+  }, [activeConversationId, isMobileScreen, mobileView]);
 
   const activeConversation = conversations.find((c) => c.id === activeConversationId) || (conversations.length > 0 ? conversations[0] : null);
   const activeId = activeConversation?.id || activeConversationId;
