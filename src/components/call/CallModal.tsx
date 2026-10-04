@@ -399,30 +399,39 @@ export const CallModal: React.FC<CallModalProps> = ({
       setCallStatus('ended');
       callStatusRef.current = 'ended';
       setDeclineMessage(`${session.targetUser.name} declined the call`);
-      setTimeout(cleanupAndClose, 2500);
+      setTimeout(cleanupAndClose, 2000);
     };
 
     // Listen for call ended / terminated
-    const handleCallEnded = () => {
+    const handleCallEnded = (data?: { status?: string }) => {
       soundFX.stopRingtone();
       soundFX.playCallEnd();
       setCallStatus('ended');
       callStatusRef.current = 'ended';
-      setDeclineMessage('Call ended');
+      const msg = data?.status === 'cancelled' || (session.direction === 'incoming' && durationRef.current === 0)
+        ? 'Call cancelled by caller'
+        : 'Call ended';
+      setDeclineMessage(msg);
       setTimeout(cleanupAndClose, 1500);
     };
 
     realtimeClient.on('call.signal', handleSignal);
     realtimeClient.on('call.accepted', handleCallAccepted);
+    realtimeClient.on('call.accept', handleCallAccepted);
     realtimeClient.on('call.rejected', handleCallRejected);
+    realtimeClient.on('call.reject', handleCallRejected);
     realtimeClient.on('call.ended', handleCallEnded);
+    realtimeClient.on('call.end', handleCallEnded);
 
     return () => {
       isSubscribed = false;
       realtimeClient.off('call.signal', handleSignal);
       realtimeClient.off('call.accepted', handleCallAccepted);
+      realtimeClient.off('call.accept', handleCallAccepted);
       realtimeClient.off('call.rejected', handleCallRejected);
+      realtimeClient.off('call.reject', handleCallRejected);
       realtimeClient.off('call.ended', handleCallEnded);
+      realtimeClient.off('call.end', handleCallEnded);
     };
   }, []);
 
@@ -475,8 +484,8 @@ export const CallModal: React.FC<CallModalProps> = ({
     });
     setCallStatus('ended');
     callStatusRef.current = 'ended';
-    setDeclineMessage('Call declined');
-    setTimeout(cleanupAndClose, 2500);
+    setDeclineMessage('You declined the call');
+    setTimeout(cleanupAndClose, 1800);
   };
 
   // Accept incoming call trigger
@@ -948,6 +957,24 @@ export const CallModal: React.FC<CallModalProps> = ({
                 <span>Answer Video</span>
               </button>
             )}
+          </div>
+        ) : callStatus === 'ended' ? (
+          <div
+            style={{
+              padding: '18px 24px',
+              background: 'var(--bg-surface)',
+              borderTop: '1px solid var(--border-subtle)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              color: 'var(--text-muted)',
+              fontSize: 13,
+              fontWeight: 600,
+            }}
+          >
+            <PhoneOff size={15} color="#ef4444" />
+            <span>{declineMessage || 'Call ended'}</span>
           </div>
         ) : (
           /* Active Call Controls Bar */

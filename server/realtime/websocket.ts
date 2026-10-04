@@ -134,16 +134,31 @@ const handleSocketEvent = (ws: AuthenticatedSocket, message: { event: string; da
     if (callData.targetUserId) {
       const recipientSockets = userSockets.get(callData.targetUserId);
       if (recipientSockets) {
-        const messageString = JSON.stringify({
-          event,
-          data: {
-            ...callData,
-            fromUserId: ws.userId,
-          },
-        });
+        const eventsToSend = new Set<string>([event]);
+        if (event === 'call.reject' || event === 'call.rejected') {
+          eventsToSend.add('call.reject');
+          eventsToSend.add('call.rejected');
+        }
+        if (event === 'call.end' || event === 'call.ended') {
+          eventsToSend.add('call.end');
+          eventsToSend.add('call.ended');
+        }
+        if (event === 'call.accept' || event === 'call.accepted') {
+          eventsToSend.add('call.accept');
+          eventsToSend.add('call.accepted');
+        }
+
         recipientSockets.forEach((s) => {
           if (s.readyState === WebSocket.OPEN) {
-            s.send(messageString);
+            eventsToSend.forEach((ev) => {
+              s.send(JSON.stringify({
+                event: ev,
+                data: {
+                  ...callData,
+                  fromUserId: ws.userId,
+                },
+              }));
+            });
           }
         });
       }

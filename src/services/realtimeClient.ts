@@ -55,6 +55,20 @@ class RealtimeClient {
             return;
           }
 
+          // Normalize and emit call event aliases
+          if (parsed.event === 'call.reject' || parsed.event === 'call.rejected') {
+            this.emit('call.reject', parsed.data);
+            this.emit('call.rejected', parsed.data);
+            this.clearCallNotification();
+          } else if (parsed.event === 'call.end' || parsed.event === 'call.ended') {
+            this.emit('call.end', parsed.data);
+            this.emit('call.ended', parsed.data);
+            this.clearCallNotification();
+          } else if (parsed.event === 'call.accept' || parsed.event === 'call.accepted') {
+            this.emit('call.accept', parsed.data);
+            this.emit('call.accepted', parsed.data);
+          }
+
           // Handle notifications
           if (parsed.event === 'message.created') {
             soundFX.playReceive();
@@ -63,10 +77,6 @@ class RealtimeClient {
 
           if (parsed.event === 'call.start') {
             this.showCallNotification(parsed.data);
-          }
-
-          if (parsed.event === 'call.ended' || parsed.event === 'call.rejected') {
-            this.clearCallNotification();
           }
         } catch (e) {
           console.error('[Realtime] Message parse error:', e);
