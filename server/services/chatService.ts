@@ -1,7 +1,7 @@
 import { db } from '../db/index.js';
 import { UserRecord, ConversationRecord, MessageRecord } from '../db/schema.js';
 import { assertConversationAccess, assertMessageAccess } from '../middleware/authorization.js';
-import { broadcastToConversation } from '../realtime/websocket.js';
+import { broadcastToConversation, revokeUserSessions } from '../realtime/websocket.js';
 
 export class ChatService {
   // Get conversations visible to the authenticated user
@@ -277,6 +277,53 @@ export class ChatService {
 
     const updated = db.updateConversation(conversationId, dbUpdates);
     return updated!;
+  }
+
+  // Delete conversation permanently
+  public deleteConversation(conversationId: string, user: UserRecord): boolean {
+    const conv = assertConversationAccess(conversationId, user);
+    if (!conv) {
+      throw new Error('Forbidden. You do not have access to this conversation.');
+    }
+
+    // Broadcast deletion event to participants before removal
+    broadcastToConversation(conversationId, {
+      event: 'conversation.deleted',
+      data: { conversationId, deletedBy: user.id },
+    });
+
+    return db.deleteConversation(conversationId);
+  }
+
+  // Delete user account permanently (Owner Only)
+  public deleteUser(userId: string, currentUser: UserRecord): boolean {
+    if (currentUser.role !== 'owner') {
+      throw new Error('Forbidden. Only the owner can delete users.');
+    }
+
+    const targetUser = db.findUserById(userId);
+    if (!targetUser) {
+      throw new Error('User not found.');
+    }
+    if (targetUser.role === 'owner') {
+      throw new Error('Cannot delete owner account.');
+    }
+
+    // Broadcast conversation deletion to each conversation of this user
+    const userConvs = db.getConversations().filter(
+      (c) => c.guestId === userId || c.ownerId === userId
+    );
+    for (const conv of userConvs) {
+      broadcastToConversation(conv.id, {
+        event: 'conversation.deleted',
+        data: { conversationId: conv.id, userId },
+      });
+    }
+
+    // Revoke active sessions for target user
+    revokeUserSessions(userId, 'Your account has been deleted by the owner.');
+
+    return db.deleteUser(userId);
   }
 }
 

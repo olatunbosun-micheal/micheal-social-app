@@ -178,6 +178,17 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
         fetchConversations();
       });
 
+      realtimeClient.on('conversation.deleted', ({ conversationId: deletedId }: { conversationId: string }) => {
+        setConversations((prev) => prev.filter((c) => c.id !== deletedId));
+        setMessages((prev) => {
+          const next = { ...prev };
+          delete next[deletedId];
+          return next;
+        });
+        setActiveConversationId((prev) => (prev === deletedId ? '' : prev));
+        setIsDrawerOpen(false);
+      });
+
       realtimeClient.on('call.start', (data: { fromUserId: string; conversationId: string; isVideo: boolean; callerName: string; callerAvatar?: string }) => {
         const callerUser: User = conversations.find((c) => c.guestUser.id === data.fromUserId)?.guestUser || {
           id: data.fromUserId,
@@ -443,6 +454,58 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
     }
   };
 
+  const handleDeleteConversation = async (convId: string) => {
+    if (!token || !convId) return;
+    // Optimistic local state update
+    setConversations((prev) => {
+      const remaining = prev.filter((c) => c.id !== convId);
+      if (activeConversationId === convId) {
+        setActiveConversationId(remaining.length > 0 ? remaining[0].id : '');
+      }
+      return remaining;
+    });
+    setMessages((prev) => {
+      const remaining = { ...prev };
+      delete remaining[convId];
+      return remaining;
+    });
+    setIsDrawerOpen(false);
+
+    try {
+      await fetch(`${API_BASE}/conversations/${convId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      fetchConversations();
+    } catch (err) {
+      console.warn('Failed to delete conversation:', err);
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!token || !userId) return;
+    // Optimistic local state update
+    setConversations((prev) => {
+      const remaining = prev.filter((c) => c.guestUser.id !== userId);
+      if (contactUser?.id === userId) {
+        setActiveConversationId(remaining.length > 0 ? remaining[0].id : '');
+      }
+      return remaining;
+    });
+    setIsDrawerOpen(false);
+
+    try {
+      await fetch(`${API_BASE}/users/${userId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      fetchConversations();
+      fetchInvites();
+    } catch (err) {
+      console.warn('Failed to delete user:', err);
+    }
+  };
+
   const showSidebar = !isMobileScreen || mobileView === 'inbox';
   const showChat = !isMobileScreen || mobileView === 'chat';
 
@@ -490,6 +553,7 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
             }}
             onToggleArchive={handleToggleArchive}
             onToggleUnread={handleToggleUnread}
+            onDeleteConversation={handleDeleteConversation}
             lastMessages={Object.fromEntries(
               conversations.map((c) => [c.id, messages[c.id]?.[messages[c.id]?.length - 1]])
             )}
@@ -602,6 +666,8 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
               setIsDrawerOpen(false);
             }}
             onOpenImage={(url) => setLightboxUrl(url)}
+            onDeleteConversation={() => handleDeleteConversation(activeId)}
+            onDeleteUser={handleDeleteUser}
             isCurrentUserOwner={true}
           />
         )}

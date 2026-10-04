@@ -94,6 +94,9 @@ export const GuestShell: React.FC<GuestShellProps> = ({
             const msgData = await msgRes.json();
             setMessages(msgData.messages || []);
           }
+        } else {
+          setConversationId('');
+          setMessages([]);
         }
       }
     } catch (err) {
@@ -152,6 +155,16 @@ export const GuestShell: React.FC<GuestShellProps> = ({
         if (clearedId === conversationId) {
           setMessages([]);
         }
+      });
+
+      realtimeClient.on('session.revoked', ({ reason }: { reason?: string }) => {
+        alert(reason || 'Your account access has been revoked or removed.');
+        onLogout();
+      });
+
+      realtimeClient.on('conversation.deleted', () => {
+        setMessages([]);
+        fetchConversationData();
       });
 
       realtimeClient.on('presence.updated', ({ userId, isOnline, lastSeen }: { userId: string; isOnline: boolean; lastSeen: string }) => {

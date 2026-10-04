@@ -10,6 +10,7 @@ import inviteRoutes from './routes/invites.js';
 import conversationRoutes from './routes/conversations.js';
 import messageRoutes from './routes/messages.js';
 import mediaRoutes from './routes/media.js';
+import userRoutes from './routes/users.js';
 import { initWebSocketServer } from './realtime/websocket.js';
 
 const app = express();
@@ -29,6 +30,7 @@ app.use('/api/invites', inviteRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/media', mediaRoutes);
+app.use('/api/users', userRoutes);
 
 // Health check endpoint
 app.get('/api/health', (_req, res) => {

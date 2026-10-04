@@ -226,6 +226,52 @@ class DatabaseEngine {
     }
     this.save();
   }
+
+  // --- Deletion Methods ---
+  public deleteConversation(conversationId: string): boolean {
+    const idx = this.data.conversations.findIndex((c) => c.id === conversationId);
+    if (idx === -1) return false;
+
+    // Remove conversation
+    this.data.conversations.splice(idx, 1);
+    // Remove all associated messages
+    this.data.messages = this.data.messages.filter((m) => m.conversationId !== conversationId);
+    this.save();
+    return true;
+  }
+
+  public deleteUser(userId: string): boolean {
+    const user = this.findUserById(userId);
+    if (!user || user.role === 'owner') return false;
+
+    // Find and remove all conversations involving this user
+    const userConvs = this.data.conversations.filter(
+      (c) => c.guestId === userId || c.ownerId === userId
+    );
+    const convIds = new Set(userConvs.map((c) => c.id));
+
+    this.data.conversations = this.data.conversations.filter((c) => !convIds.has(c.id));
+    this.data.messages = this.data.messages.filter((m) => !convIds.has(m.conversationId));
+
+    // Remove user references from invites
+    this.data.invites.forEach((inv) => {
+      if (inv.claimedByUserId === userId) {
+        inv.claimedByUserId = undefined;
+      }
+      if (inv.usedByUserIds) {
+        inv.usedByUserIds = inv.usedByUserIds.filter((id) => id !== userId);
+      }
+    });
+
+    // Remove user from database
+    const userIdx = this.data.users.findIndex((u) => u.id === userId);
+    if (userIdx !== -1) {
+      this.data.users.splice(userIdx, 1);
+    }
+
+    this.save();
+    return true;
+  }
 }
 
 export const db = new DatabaseEngine();

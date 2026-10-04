@@ -100,4 +100,16 @@ router.patch('/:id', authenticateJWT, (req: AuthenticatedRequest, res: Response)
   }
 });
 
+// Delete conversation completely
+router.delete('/:id', authenticateJWT, (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    chatService.deleteConversation(id, req.user!);
+    res.json({ success: true, conversationId: id, message: 'Conversation deleted successfully' });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Failed to delete conversation';
+    res.status(403).json({ error: msg });
+  }
+});
+
 export default router;

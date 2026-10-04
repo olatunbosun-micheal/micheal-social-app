@@ -15,6 +15,7 @@ import {
   ArchiveRestore,
   CheckCheck,
   Mail,
+  Trash2,
 } from 'lucide-react';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { PWAInstallModal } from './PWAInstallModal';
@@ -25,6 +26,7 @@ interface OwnerInboxProps {
   onSelectConversation: (convId: string) => void;
   onToggleArchive?: (convId: string, isArchived: boolean) => void;
   onToggleUnread?: (convId: string, currentUnread: number) => void;
+  onDeleteConversation?: (convId: string) => void;
   lastMessages: Record<string, Message | undefined>;
   typingUsers: Record<string, boolean>;
   onOpenSettings?: () => void;
@@ -37,6 +39,7 @@ export const OwnerInbox: React.FC<OwnerInboxProps> = ({
   onSelectConversation,
   onToggleArchive,
   onToggleUnread,
+  onDeleteConversation,
   lastMessages,
   typingUsers,
   onOpenInviteModal,
@@ -275,6 +278,32 @@ export const OwnerInbox: React.FC<OwnerInboxProps> = ({
                           title={conv.isArchived ? 'Unarchive chat' : 'Archive chat'}
                         >
                           {conv.isArchived ? <ArchiveRestore size={12} /> : <Archive size={12} />}
+                        </button>
+                      )}
+                      {onDeleteConversation && (
+                        <button
+                          type="button"
+                          className="icon-action-btn"
+                          style={{
+                            width: 22,
+                            height: 22,
+                            padding: 0,
+                            borderRadius: 'var(--radius-sm)',
+                            border: '1px solid var(--border-subtle)',
+                            background: 'transparent',
+                            color: 'var(--text-muted)',
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm(`Permanently delete conversation with ${conv.guestUser.name}? All messages will be wiped.`)) {
+                              onDeleteConversation(conv.id);
+                            }
+                          }}
+                          title="Delete conversation"
+                          onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
+                          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+                        >
+                          <Trash2 size={12} />
                         </button>
                       )}
                     </div>

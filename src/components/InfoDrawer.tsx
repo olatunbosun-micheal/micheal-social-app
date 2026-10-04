@@ -11,6 +11,7 @@ import {
   PhoneMissed,
   PhoneIncoming,
   PhoneOutgoing,
+  UserX,
 } from 'lucide-react';
 
 interface InfoDrawerProps {
@@ -19,6 +20,8 @@ interface InfoDrawerProps {
   onClose: () => void;
   onToggleBlockUser: (userId: string) => void;
   onClearChat: () => void;
+  onDeleteConversation?: () => void;
+  onDeleteUser?: (userId: string) => void;
   onOpenImage: (url: string) => void;
   isCurrentUserOwner: boolean;
 }
@@ -29,6 +32,8 @@ export const InfoDrawer: React.FC<InfoDrawerProps> = ({
   onClose,
   onToggleBlockUser,
   onClearChat,
+  onDeleteConversation,
+  onDeleteUser,
   onOpenImage,
   isCurrentUserOwner,
 }) => {
@@ -289,6 +294,48 @@ export const InfoDrawer: React.FC<InfoDrawerProps> = ({
             <Trash2 size={15} />
             <span>Clear Chat History</span>
           </button>
+
+          {onDeleteConversation && (
+            <button
+              className="control-btn"
+              style={{
+                justifyContent: 'center',
+                padding: '10px',
+                color: '#ef4444',
+                borderColor: 'rgba(239, 68, 68, 0.3)',
+              }}
+              onClick={() => {
+                if (window.confirm(`Are you sure you want to delete this conversation with ${user.name}? All message history will be permanently wiped.`)) {
+                  onDeleteConversation();
+                }
+              }}
+            >
+              <Trash2 size={15} />
+              <span>Delete Conversation</span>
+            </button>
+          )}
+
+          {isCurrentUserOwner && onDeleteUser && (
+            <button
+              className="control-btn"
+              style={{
+                justifyContent: 'center',
+                padding: '10px',
+                color: '#ef4444',
+                background: 'rgba(239, 68, 68, 0.08)',
+                borderColor: 'rgba(239, 68, 68, 0.5)',
+                fontWeight: 600,
+              }}
+              onClick={() => {
+                if (window.confirm(`⚠️ DANGER: Permanently delete user "${user.name}"? This will terminate their active sessions, delete their login access, and wipe their private channel.`)) {
+                  onDeleteUser(user.id);
+                }
+              }}
+            >
+              <UserX size={15} />
+              <span>Delete User Account</span>
+            </button>
+          )}
         </div>
       </div>
     </div>
