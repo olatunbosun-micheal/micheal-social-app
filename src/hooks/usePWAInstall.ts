@@ -27,14 +27,22 @@ export function usePWAInstall() {
       return;
     }
 
+    // Check if prompt was captured early
+    if (typeof window !== 'undefined' && (window as unknown as { __deferredPrompt?: BeforeInstallPromptEvent }).__deferredPrompt) {
+      setDeferredPrompt((window as unknown as { __deferredPrompt?: BeforeInstallPromptEvent }).__deferredPrompt || null);
+    }
+
     const handleBeforeInstall = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
+      const promptEvent = e as BeforeInstallPromptEvent;
+      (window as unknown as { __deferredPrompt?: BeforeInstallPromptEvent }).__deferredPrompt = promptEvent;
+      setDeferredPrompt(promptEvent);
     };
 
     const handleAppInstalled = () => {
       setIsInstalled(true);
       setDeferredPrompt(null);
+      (window as unknown as { __deferredPrompt?: BeforeInstallPromptEvent }).__deferredPrompt = undefined;
       setShowGuide(false);
     };
 

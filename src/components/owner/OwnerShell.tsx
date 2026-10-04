@@ -11,7 +11,7 @@ import { MediaLightbox } from '../MediaLightbox';
 import { CallModal, type CallSession } from '../call/CallModal';
 import { API_BASE } from '../../config';
 import { realtimeClient } from '../../services/realtimeClient';
-import { UserPlus, LogOut, Moon, Sun, ShieldCheck } from 'lucide-react';
+import { LogOut, Moon, Sun, ShieldCheck } from 'lucide-react';
 
 interface OwnerShellProps {
   ownerUser: User;
@@ -460,15 +460,6 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
         </div>
 
         <div className="control-bar-right">
-          <button
-            className="control-btn active"
-            onClick={() => setIsInviteModalOpen(true)}
-            style={{ fontWeight: 600 }}
-          >
-            <UserPlus size={14} />
-            <span>Invite</span>
-          </button>
-
           <button className="control-btn" onClick={onToggleTheme} title="Switch Theme">
             {theme === 'dark' ? <Moon size={14} /> : <Sun size={14} />}
           </button>

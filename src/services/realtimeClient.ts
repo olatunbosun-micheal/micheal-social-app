@@ -60,6 +60,14 @@ class RealtimeClient {
             soundFX.playReceive();
             this.showPushNotification(parsed.data);
           }
+
+          if (parsed.event === 'call.start') {
+            this.showCallNotification(parsed.data);
+          }
+
+          if (parsed.event === 'call.ended' || parsed.event === 'call.rejected') {
+            this.clearCallNotification();
+          }
         } catch (e) {
           console.error('[Realtime] Message parse error:', e);
         }
@@ -165,16 +173,96 @@ class RealtimeClient {
     }
   }
 
-  private showPushNotification(msg: any) {
-    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+  public async showCallNotification(callData: any) {
+    if (typeof window === 'undefined') return;
+
+    const callerName = callData.callerName || 'Someone';
+    const isVideo = !!callData.isVideo;
+    const title = `📞 Incoming ${isVideo ? 'Video' : 'Voice'} Call`;
+    const options: any = {
+      body: `${callerName} is calling you on Gateway. Tap to answer.`,
+      icon: callData.callerAvatar || '/icon-192.png',
+      badge: '/favicon.svg',
+      tag: 'incoming-call',
+      renotify: true,
+      requireInteraction: true,
+      vibrate: [400, 200, 400, 200, 400, 200, 600, 200, 400],
+      data: {
+        action: 'call',
+        conversationId: callData.conversationId,
+        fromUserId: callData.fromUserId,
+        isVideo,
+      },
+      actions: [
+        { action: 'answer', title: 'Answer' },
+        { action: 'decline', title: 'Decline' },
+      ],
+    };
+
+    if ('Notification' in window && Notification.permission === 'granted') {
       try {
-        const title = msg.senderName || 'New Message from Guest';
-        const body = msg.content || (msg.type === 'audio' ? 'Sent a voice note' : 'Sent an attachment');
-        new Notification(title, {
-          body,
-          icon: '/favicon.svg',
-          badge: '/favicon.svg',
-        });
+        if ('serviceWorker' in navigator) {
+          const reg = await navigator.serviceWorker.ready;
+          if (reg && 'showNotification' in reg) {
+            await reg.showNotification(title, options);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('[Notification] SW showNotification error:', err);
+      }
+
+      try {
+        new Notification(title, options);
+      } catch (err) {
+        console.warn('[Notification] fallback constructor error:', err);
+      }
+    }
+  }
+
+  public async clearCallNotification() {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      if (reg) {
+        const notifs = await reg.getNotifications({ tag: 'incoming-call' });
+        notifs.forEach((n) => n.close());
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  private async showPushNotification(msg: any) {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      const title = msg.senderName || 'New Message on Gateway';
+      const body = msg.content || (msg.type === 'audio' ? 'Sent a voice note' : 'Sent an attachment');
+      const options: any = {
+        body,
+        icon: '/icon-192.png',
+        badge: '/favicon.svg',
+        tag: `msg-${msg.id || Date.now()}`,
+        vibrate: [200, 100, 200],
+        data: {
+          url: '/',
+          conversationId: msg.conversationId,
+        },
+      };
+
+      try {
+        if ('serviceWorker' in navigator) {
+          const reg = await navigator.serviceWorker.ready;
+          if (reg && 'showNotification' in reg) {
+            await reg.showNotification(title, options);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('[Notification] SW showNotification error:', err);
+      }
+
+      try {
+        new Notification(title, options);
       } catch {
         // Notification fallback
       }

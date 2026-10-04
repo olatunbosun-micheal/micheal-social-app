@@ -114,6 +114,23 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
           <span>Full-screen app experience, background alerts &amp; instant biometric/vault access.</span>
         </div>
 
+        {/* Insecure context warning if testing over plain HTTP on LAN */}
+        {typeof window !== 'undefined' && !window.isSecureContext && window.location.hostname !== 'localhost' && (
+          <div
+            style={{
+              padding: '10px 12px',
+              backgroundColor: 'rgba(234, 179, 8, 0.1)',
+              border: '1px solid rgba(234, 179, 8, 0.3)',
+              borderRadius: 'var(--radius-xs)',
+              fontSize: '11.5px',
+              color: 'var(--accent-warning)',
+              lineHeight: 1.4,
+            }}
+          >
+            <strong>Note for Mobile:</strong> Mobile browsers require HTTPS or a tunnel (e.g., ngrok/Cloudflare) for automated install prompts. You can still install right now by tapping your browser menu <strong>(⋮)</strong> and selecting <strong>"Add to Home Screen"</strong>!
+          </div>
+        )}
+
         {/* Direct native trigger button if browser supports it */}
         {hasPrompt && onTriggerPrompt && (
           <button

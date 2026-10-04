@@ -4,6 +4,7 @@ const CACHE_NAME = 'gateway-pwa-v1';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
+  '/manifest.json',
   '/manifest.webmanifest',
   '/favicon.svg',
   '/icon-192.png',
@@ -86,13 +87,31 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Notification click handler — focus or open app window
+// Notification click handler — focus or open app window, handle call actions
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  const notifData = event.notification.data || {};
+
+  if (event.action === 'decline') {
+    // Notify clients that call was declined from notification
+    event.waitUntil(
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+        clients.forEach((client) => {
+          client.postMessage({ type: 'CALL_DECLINED_FROM_NOTIF', data: notifData });
+        });
+      })
+    );
+    return;
+  }
+
+  // Focus existing open window or launch new window
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
         if ('focus' in client) {
+          if (event.action === 'answer' || notifData.action === 'call') {
+            client.postMessage({ type: 'CALL_ANSWERED_FROM_NOTIF', data: notifData });
+          }
           return client.focus();
         }
       }
@@ -101,4 +120,31 @@ self.addEventListener('notificationclick', (event) => {
       }
     })
   );
+});
+
+// Push notification event handler (for remote push notifications when app is suspended)
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+
+  try {
+    const payload = event.data.json();
+    const title = payload.title || 'Gateway Alert';
+    const options = {
+      body: payload.body || 'You have an alert on Gateway.',
+      icon: payload.icon || '/icon-192.png',
+      badge: '/favicon.svg',
+      tag: payload.tag || 'gateway-alert',
+      vibrate: payload.tag === 'incoming-call' ? [400, 200, 400, 200, 400, 200, 600] : [200, 100, 200],
+      requireInteraction: payload.tag === 'incoming-call',
+      data: payload.data || {},
+      actions: payload.tag === 'incoming-call' ? [
+        { action: 'answer', title: 'Answer' },
+        { action: 'decline', title: 'Decline' },
+      ] : undefined,
+    };
+
+    event.waitUntil(self.registration.showNotification(title, options));
+  } catch (err) {
+    console.warn('[SW] Push payload parse error:', err);
+  }
 });
