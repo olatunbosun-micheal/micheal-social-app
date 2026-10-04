@@ -105,6 +105,11 @@ export class ChatService {
       }
     }
 
+    const recipientId = sender.role === 'owner' ? conv.guestId : conv.ownerId;
+    const recipientUser = db.findUserById(recipientId);
+    const isRecipientOnline = !!recipientUser?.isOnline;
+    const initialStatus: 'sent' | 'delivered' = isRecipientOnline ? 'delivered' : 'sent';
+
     const now = new Date().toISOString();
     const newMessage: MessageRecord = {
       id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
@@ -116,7 +121,7 @@ export class ChatService {
       replyTo: replyToContext,
       callLog,
       clientTempId,
-      status: 'sent',
+      status: initialStatus,
       reactions: [],
       isEdited: false,
       isDeletedForEveryone: false,
@@ -324,6 +329,52 @@ export class ChatService {
     revokeUserSessions(userId, 'Your account has been deleted by the owner.');
 
     return db.deleteUser(userId);
+  }
+
+  // Mark all unread messages from the other user as read/seen in real time
+  public markMessagesAsRead(
+    conversationId: string,
+    readerUser: UserRecord
+  ): { count: number; updatedMessageIds: string[] } {
+    const conv = assertConversationAccess(conversationId, readerUser);
+    if (!conv) {
+      throw new Error('Forbidden. You do not have access to this conversation.');
+    }
+
+    const messages = db.getMessagesByConversation(conversationId);
+    const unreadMessages = messages.filter(
+      (m) => m.senderId !== readerUser.id && m.status !== 'read'
+    );
+
+    const updatedMessageIds: string[] = [];
+    if (unreadMessages.length > 0) {
+      for (const msg of unreadMessages) {
+        db.updateMessage(msg.id, { status: 'read' });
+        updatedMessageIds.push(msg.id);
+      }
+    }
+
+    // Reset unread count for this reader in the conversation
+    if (readerUser.role === 'owner') {
+      db.updateConversation(conversationId, { unreadCountOwner: 0 });
+    } else {
+      db.updateConversation(conversationId, { unreadCountGuest: 0 });
+    }
+
+    // Broadcast real-time read receipt event to room participants
+    if (updatedMessageIds.length > 0) {
+      broadcastToConversation(conversationId, {
+        event: 'messages.read',
+        data: {
+          conversationId,
+          readByUserId: readerUser.id,
+          messageIds: updatedMessageIds,
+          readAt: new Date().toISOString(),
+        },
+      });
+    }
+
+    return { count: updatedMessageIds.length, updatedMessageIds };
   }
 }
 

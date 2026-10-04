@@ -30,6 +30,13 @@ export interface InviteRecord {
   usedByUserIds: string[];
 }
 
+export interface InviteRequestRecord {
+  id: string;
+  email: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+}
+
 export interface ConversationRecord {
   id: string;
   guestId: string;
@@ -94,6 +101,7 @@ export interface MessageRecord {
 export interface DatabaseSchema {
   users: UserRecord[];
   invites: InviteRecord[];
+  inviteRequests: InviteRequestRecord[];
   conversations: ConversationRecord[];
   messages: MessageRecord[];
 }

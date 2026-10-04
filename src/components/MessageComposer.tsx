@@ -118,8 +118,15 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
     if (recorder && recorder.state !== 'inactive') {
       recorder.onstop = async () => {
         try {
-          const audioBlob = new Blob(chunks, { type: 'audio/webm' });
-          const audioFile = new File([audioBlob], `voice_note_${Date.now()}.webm`, { type: 'audio/webm' });
+          const supportedTypes = ['audio/webm', 'audio/mp4', 'audio/ogg'];
+          let mimeType = 'audio/webm';
+          if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported) {
+            mimeType = supportedTypes.find(t => MediaRecorder.isTypeSupported(t)) || mimeType;
+          }
+          
+          const audioBlob = new Blob(chunks, { type: mimeType });
+          const ext = mimeType.split('/')[1] || 'webm';
+          const audioFile = new File([audioBlob], `voice_note_${Date.now()}.${ext}`, { type: mimeType });
 
           const token = localStorage.getItem('gateway_token');
           const formData = new FormData();

@@ -44,10 +44,24 @@ router.get('/', authenticateJWT, (req: AuthenticatedRequest, res: Response) => {
 router.get('/:id/messages', authenticateJWT, (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
+    // Automatically mark incoming messages as read when opening conversation
+    chatService.markMessagesAsRead(id, req.user!);
     const messages = chatService.getMessages(id, req.user!);
     res.json({ messages });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Error fetching messages';
+    res.status(403).json({ error: message });
+  }
+});
+
+// Explicitly mark conversation as read/seen (Real-time trigger)
+router.post('/:id/read', authenticateJWT, (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const result = chatService.markMessagesAsRead(id, req.user!);
+    res.json({ success: true, ...result });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Failed to mark as read';
     res.status(403).json({ error: message });
   }
 });

@@ -14,11 +14,19 @@ export interface InviteData {
   qrCodeSvg?: string;
 }
 
+export interface InviteRequestData {
+  id: string;
+  email: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+}
+
 interface InviteModalProps {
   ownerName: string;
   onClose: () => void;
   onGenerateInvite: (params: { recipientName?: string; note?: string; maxUses: number; expiresInHours?: number | null }) => Promise<InviteData>;
   existingInvites: InviteData[];
+  inviteRequests: InviteRequestData[];
   onRevokeInvite: (id: string) => void;
 }
 
@@ -27,9 +35,10 @@ export const InviteModal: React.FC<InviteModalProps> = ({
   onClose,
   onGenerateInvite,
   existingInvites,
+  inviteRequests,
   onRevokeInvite,
 }) => {
-  const [activeTab, setActiveTab] = useState<'create' | 'manage'>('create');
+  const [activeTab, setActiveTab] = useState<'create' | 'manage' | 'requests'>('requests');
   const [recipientName, setRecipientName] = useState('');
   const [note, setNote] = useState('');
   const [isSingleUse, setIsSingleUse] = useState(true);
@@ -105,16 +114,22 @@ export const InviteModal: React.FC<InviteModalProps> = ({
         {/* Tab Toggle */}
         <div className="inbox-tabs" style={{ padding: 0, border: 'none' }}>
           <button
+            className={`inbox-tab ${activeTab === 'requests' ? 'active' : ''}`}
+            onClick={() => setActiveTab('requests')}
+          >
+            Requests {inviteRequests.length > 0 && `(${inviteRequests.length})`}
+          </button>
+          <button
             className={`inbox-tab ${activeTab === 'create' ? 'active' : ''}`}
             onClick={() => setActiveTab('create')}
           >
-            Create Invite
+            Create
           </button>
           <button
             className={`inbox-tab ${activeTab === 'manage' ? 'active' : ''}`}
             onClick={() => setActiveTab('manage')}
           >
-            Active Invites ({existingInvites.filter((i) => !i.isRevoked).length})
+            Active
           </button>
         </div>
 
@@ -277,7 +292,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
               </div>
             </div>
           )
-        ) : (
+        ) : activeTab === 'manage' ? (
           /* Manage Tab */
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 360, overflowY: 'auto' }}>
             {existingInvites.length === 0 ? (
@@ -319,6 +334,51 @@ export const InviteModal: React.FC<InviteModalProps> = ({
                       <span>Revoke</span>
                     </button>
                   )}
+                </div>
+              ))
+            )}
+          </div>
+        ) : (
+          /* Requests Tab */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 360, overflowY: 'auto' }}>
+            {inviteRequests.length === 0 ? (
+              <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px 0', fontSize: 13 }}>
+                No access requests right now.
+              </div>
+            ) : (
+              inviteRequests.map((req) => (
+                <div
+                  key={req.id}
+                  style={{
+                    background: 'var(--bg-app)',
+                    padding: '12px 14px',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-subtle)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 13.5, color: 'var(--text-primary)' }}>
+                      {req.email}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                      {new Date(req.createdAt).toLocaleDateString()} • {req.status}
+                    </div>
+                  </div>
+
+                  <button
+                    className="submit-btn"
+                    style={{ padding: '6px 12px', fontSize: 12 }}
+                    onClick={() => {
+                      setRecipientName(req.email.split('@')[0]);
+                      setNote(`Requested invite for ${req.email}`);
+                      setActiveTab('create');
+                    }}
+                  >
+                    Grant Access
+                  </button>
                 </div>
               ))
             )}

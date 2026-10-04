@@ -4,15 +4,15 @@
       "id": "user_micheal",
       "name": "Micheal",
       "email": "kilogbede19@gmail.com",
-      "passwordHash": "$2b$10$8m59Bwf4eWBwUE6ZsxH7a.5.hAzw.ALINFr34gBlZV2H.1G7cWznS",
+      "passwordHash": "$2b$10$oK3KlQ6cnFfEpFLjAhpfJO6eYQHeXLXWS7bSbv31R0Brdroe.MVCe",
       "role": "owner",
       "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
       "statusMessage": "Available for private 1-on-1 briefings & discussions",
       "isBlocked": false,
-      "isOnline": false,
-      "lastSeen": "2026-10-04T04:18:17.727Z",
+      "isOnline": true,
+      "lastSeen": "online",
       "createdAt": "2026-10-03T22:45:22.303Z",
-      "updatedAt": "2026-10-04T04:18:17.727Z"
+      "updatedAt": "2026-10-04T19:23:19.770Z"
     },
     {
       "id": "user_1791068230528_3kdy2",
@@ -57,7 +57,7 @@
       "isPinned": false,
       "lastMessageAt": "2026-10-03T23:16:32.403Z",
       "createdAt": "2026-10-03T22:57:10.531Z",
-      "updatedAt": "2026-10-04T04:18:14.578Z"
+      "updatedAt": "2026-10-04T19:24:02.633Z"
     }
   ],
   "messages": [
@@ -88,13 +88,13 @@
       "senderId": "user_1791068230528_3kdy2",
       "type": "text",
       "content": "HI",
-      "status": "sent",
+      "status": "read",
       "reactions": [],
       "isEdited": false,
       "isDeletedForEveryone": false,
       "deletedForUserIds": [],
       "createdAt": "2026-10-03T22:57:22.709Z",
-      "updatedAt": "2026-10-03T22:57:22.709Z"
+      "updatedAt": "2026-10-04T18:57:08.403Z"
     },
     {
       "id": "msg_1791068281643_dmj5",
@@ -116,13 +116,13 @@
       "senderId": "user_1791068230528_3kdy2",
       "type": "text",
       "content": "Fine my Skii, we dey push jarey",
-      "status": "sent",
+      "status": "read",
       "reactions": [],
       "isEdited": false,
       "isDeletedForEveryone": false,
       "deletedForUserIds": [],
       "createdAt": "2026-10-03T22:58:13.129Z",
-      "updatedAt": "2026-10-03T22:58:13.129Z"
+      "updatedAt": "2026-10-04T18:57:08.408Z"
     },
     {
       "id": "msg_1791068355451_bpx2",
@@ -195,13 +195,13 @@
       "senderId": "user_1791068230528_3kdy2",
       "type": "text",
       "content": "i dey jarey wbu?",
-      "status": "sent",
+      "status": "read",
       "reactions": [],
       "isEdited": false,
       "isDeletedForEveryone": false,
       "deletedForUserIds": [],
       "createdAt": "2026-10-03T23:15:07.789Z",
-      "updatedAt": "2026-10-03T23:15:07.789Z"
+      "updatedAt": "2026-10-04T18:57:08.412Z"
     },
     {
       "id": "msg_1791069392403_nd0b",
@@ -209,13 +209,14 @@
       "senderId": "user_1791068230528_3kdy2",
       "type": "text",
       "content": "hi",
-      "status": "sent",
+      "status": "read",
       "reactions": [],
       "isEdited": false,
       "isDeletedForEveryone": false,
       "deletedForUserIds": [],
       "createdAt": "2026-10-03T23:16:32.403Z",
-      "updatedAt": "2026-10-03T23:16:32.403Z"
+      "updatedAt": "2026-10-04T18:57:08.415Z"
     }
-  ]
+  ],
+  "inviteRequests": []
 }

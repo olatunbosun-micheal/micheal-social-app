@@ -93,6 +93,8 @@ export const GuestShell: React.FC<GuestShellProps> = ({
           if (msgRes.ok) {
             const msgData = await msgRes.json();
             setMessages(msgData.messages || []);
+            // Emit real-time read receipt to owner
+            realtimeClient.send('messages.read', { conversationId: conv.id });
           }
         } else {
           setConversationId('');
@@ -161,6 +163,17 @@ export const GuestShell: React.FC<GuestShellProps> = ({
         if (userId === ownerUser.id) {
           setIsOwnerTyping(false);
         }
+      });
+
+      realtimeClient.on('messages.read', (_data: { conversationId: string; readByUserId: string }) => {
+        setMessages((prev) =>
+          prev.map((m) => {
+            if (m.senderId === currentUser.id && m.status !== 'read') {
+              return { ...m, status: 'read' as const };
+            }
+            return m;
+          })
+        );
       });
 
       realtimeClient.on('conversation.cleared', ({ conversationId: clearedId }: { conversationId: string }) => {
@@ -484,11 +497,7 @@ export const GuestShell: React.FC<GuestShellProps> = ({
                     flexShrink: 0,
                   }}
                 >
-                  {currentUser.avatar ? (
-                    <img src={currentUser.avatar} alt={currentUser.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    currentUser.name[0]
-                  )}
+                  {currentUser.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
                 </div>
                 <div style={{ overflow: 'hidden' }}>
                   <div style={{ fontWeight: 700, fontSize: 17, color: 'var(--text-primary)' }}>{currentUser.name}</div>

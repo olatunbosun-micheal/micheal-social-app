@@ -9,6 +9,7 @@ class DatabaseEngine {
   private data: DatabaseSchema = {
     users: [],
     invites: [],
+    inviteRequests: [],
     conversations: [],
     messages: [],
   };
@@ -91,6 +92,7 @@ class DatabaseEngine {
     this.data = {
       users: [owner],
       invites: [],
+      inviteRequests: [],
       conversations: [],
       messages: [],
     };
@@ -159,6 +161,28 @@ class DatabaseEngine {
     this.data.invites.splice(idx, 1);
     this.save();
     return true;
+  }
+
+  // --- Invite Requests ---
+  public getInviteRequests() {
+    if (!this.data.inviteRequests) this.data.inviteRequests = [];
+    return this.data.inviteRequests;
+  }
+
+  public createInviteRequest(email: string) {
+    if (!this.data.inviteRequests) this.data.inviteRequests = [];
+    const existing = this.data.inviteRequests.find(r => r.email === email);
+    if (existing) return existing;
+    
+    const req = {
+      id: 'req_' + Math.random().toString(36).substr(2, 9),
+      email,
+      status: 'pending' as const,
+      createdAt: new Date().toISOString()
+    };
+    this.data.inviteRequests.push(req);
+    this.save();
+    return req;
   }
 
   // --- Conversations ---

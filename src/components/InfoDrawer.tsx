@@ -84,13 +84,9 @@ export const InfoDrawer: React.FC<InfoDrawerProps> = ({
       </div>
 
       <div className="drawer-profile-card">
-        {user.avatar ? (
-          <img src={user.avatar} alt={user.name} className="drawer-avatar" />
-        ) : (
-          <div className="drawer-avatar avatar-placeholder" style={{ fontSize: 32 }}>
-            {user.name[0]}
-          </div>
-        )}
+        <div className="drawer-avatar avatar-placeholder" style={{ fontSize: 32 }}>
+          {user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+        </div>
         <div className="drawer-name">{user.name}</div>
         <div className="drawer-email">{user.email}</div>
         <div className="drawer-status">{user.statusMessage || 'Available'}</div>

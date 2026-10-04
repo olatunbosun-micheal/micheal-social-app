@@ -71,7 +71,7 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
             </div>
             <div>
               <h3 style={{ fontSize: '15px', fontWeight: 700, margin: 0, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
-                Install Gateway App
+                Install MA's Social App
               </h3>
               <p style={{ fontSize: '11.5px', color: 'var(--text-muted)', margin: 0, fontFamily: 'var(--font-mono)' }}>
                 STANDALONE 1-ON-1 VAULT

@@ -1,6 +1,6 @@
 {
-  "name": "Gateway — Personal Communication Gateway",
-  "short_name": "Gateway",
+  "name": "MA's Social App",
+  "short_name": "MA's Social App",
   "description": "Secure, isolated private 1-on-1 communication gateway with real-time messaging, audio, and video calling.",
   "id": "/",
   "start_url": "/",

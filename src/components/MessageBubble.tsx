@@ -12,6 +12,9 @@ import {
   PhoneOutgoing,
   PhoneMissed,
   Video,
+  Check,
+  CheckCheck,
+  Clock,
 } from 'lucide-react';
 import { VoicePlayer } from './VoicePlayer';
 import { soundFX } from '../services/soundEffects';
@@ -256,14 +259,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               <div
                 key={att.id}
                 className="bubble-video-wrapper"
-                style={{ margin: '4px 0', maxWidth: 360, borderRadius: 4, overflow: 'hidden' }}
+                style={{ margin: '4px 0', maxWidth: '100%', width: '100%', borderRadius: 6, overflow: 'hidden' }}
               >
                 <video
                   src={vidSrc}
                   controls
                   playsInline
                   preload="metadata"
-                  style={{ width: '100%', maxHeight: 260, display: 'block', background: '#0a0d14' }}
+                  style={{ width: '100%', maxHeight: 280, display: 'block', background: '#0a0d14' }}
                 />
               </div>
             );
@@ -402,11 +405,27 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           <span>{formatTime(message.createdAt)}</span>
 
           {isOutgoing && (
-            <span className={`message-status-pill ${message.status}`}>
-              {message.status === 'sending' && 'SENDING'}
-              {message.status === 'sent' && 'SENT'}
-              {message.status === 'delivered' && 'DELIV'}
-              {message.status === 'read' && 'READ'}
+            <span
+              className={`status-check-wrapper status-${message.status || 'sent'}`}
+              title={
+                message.status === 'read'
+                  ? 'Seen'
+                  : message.status === 'delivered'
+                  ? 'Delivered'
+                  : message.status === 'sent'
+                  ? 'Sent'
+                  : 'Sending...'
+              }
+            >
+              {message.status === 'sending' ? (
+                <Clock size={11} className="status-icon-sending" />
+              ) : message.status === 'sent' ? (
+                <Check size={13} strokeWidth={2.4} className="status-icon-sent" />
+              ) : message.status === 'delivered' ? (
+                <CheckCheck size={14} strokeWidth={2.2} className="status-icon-delivered" />
+              ) : (
+                <CheckCheck size={14} strokeWidth={2.4} className="status-icon-read" />
+              )}
             </span>
           )}
         </div>

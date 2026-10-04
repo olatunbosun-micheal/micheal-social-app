@@ -36,6 +36,23 @@ router.get('/', authenticateJWT, assertOwner, (_req: AuthenticatedRequest, res: 
   res.json({ invites });
 });
 
+// List All Requests (Owner Only)
+router.get('/requests', authenticateJWT, assertOwner, (_req: AuthenticatedRequest, res: Response) => {
+  const requests = db.getInviteRequests();
+  res.json({ requests });
+});
+
+// Public: Request an Invitation Link
+router.post('/request', (req, res: Response) => {
+  const { email } = req.body;
+  if (!email || typeof email !== 'string') {
+    res.status(400).json({ error: 'Valid email is required.' });
+    return;
+  }
+  const reqRecord = db.createInviteRequest(email.trim().toLowerCase());
+  res.status(201).json(reqRecord);
+});
+
 // Public: Validate Invitation Link Token (e.g. /invite/A8K29Lm)
 router.get('/validate/:code', (req, res: Response) => {
   const { code } = req.params;

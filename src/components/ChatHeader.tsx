@@ -1,6 +1,6 @@
 import React from 'react';
 import type { User } from '../types';
-import { Phone, Video, Search, MoreVertical, ArrowLeft, Shield, Moon, Sun, Sparkles } from 'lucide-react';
+import { Phone, Video, MoreVertical, ArrowLeft, Shield, Moon, Sun, Sparkles } from 'lucide-react';
 
 interface ChatHeaderProps {
   contactUser: User;
@@ -39,11 +39,9 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
 
         <div className="chat-header-user" onClick={onToggleDrawer} title="View contact information & media">
           <div className="avatar-container" style={{ width: 38, height: 38 }}>
-            {contactUser.avatar ? (
-              <img src={contactUser.avatar} alt={contactUser.name} className="avatar-img" />
-            ) : (
-              <div className="avatar-placeholder">{contactUser.name[0]}</div>
-            )}
+            <div className="avatar-placeholder">
+              {contactUser.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+            </div>
             {contactUser.isOnline && <div className="online-indicator" />}
           </div>
 
@@ -79,14 +77,6 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           title="Secure Video Call"
         >
           <Video size={20} />
-        </button>
-
-        <button
-          className="icon-action-btn"
-          onClick={() => alert('Message search modal')}
-          title="Search conversation"
-        >
-          <Search size={19} />
         </button>
 
         {onToggleTheme && (
@@ -145,11 +135,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                 color: '#fff',
               }}
             >
-              {currentUser.avatar ? (
-                <img src={currentUser.avatar} alt={currentUser.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                currentUser.name[0]
-              )}
+              {currentUser.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
             </div>
             <span
               style={{

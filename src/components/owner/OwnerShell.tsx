@@ -6,7 +6,7 @@ import { MessageList } from '../MessageList';
 import { MessageComposer } from '../MessageComposer';
 import { InfoDrawer } from '../InfoDrawer';
 import { InviteModal } from '../InviteModal';
-import type { InviteData } from '../InviteModal';
+import type { InviteData, InviteRequestData } from '../InviteModal';
 import { MediaLightbox } from '../MediaLightbox';
 import { CallModal, type CallSession } from '../call/CallModal';
 import { API_BASE } from '../../config';
@@ -31,6 +31,7 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
   const [messages, setMessages] = useState<Record<string, Message[]>>({});
   const [replyTo, setReplyTo] = useState<ReplyContext | null>(null);
   const [invites, setInvites] = useState<InviteData[]>([]);
+  const [inviteRequests, setInviteRequests] = useState<InviteRequestData[]>([]);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
@@ -97,13 +98,15 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
           ...prev,
           [convId]: data.messages || [],
         }));
+        // Emit real-time read receipt to other participant
+        realtimeClient.send('messages.read', { conversationId: convId });
       }
     } catch (err) {
       console.warn('Failed to fetch messages:', err);
     }
   };
 
-  // Fetch invites
+  // Fetch invites & requests
   const fetchInvites = async () => {
     if (!token) return;
     try {
@@ -113,6 +116,14 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
       if (res.ok) {
         const data = await res.json();
         setInvites(data.invites || []);
+      }
+      
+      const reqRes = await fetch(`${API_BASE}/invites/requests`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (reqRes.ok) {
+        const reqData = await reqRes.json();
+        setInviteRequests(reqData.requests || []);
       }
     } catch {
       // fallback
@@ -189,6 +200,20 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
 
       realtimeClient.on('typing.stopped', ({ userId }: { userId: string }) => {
         setTypingUsers((prev) => ({ ...prev, [userId]: false }));
+      });
+
+      realtimeClient.on('messages.read', (data: { conversationId: string; readByUserId: string }) => {
+        setMessages((prev) => {
+          const list = prev[data.conversationId];
+          if (!list) return prev;
+          const updated = list.map((m) => {
+            if (m.senderId === ownerUser.id && m.status !== 'read') {
+              return { ...m, status: 'read' as const };
+            }
+            return m;
+          });
+          return { ...prev, [data.conversationId]: updated };
+        });
       });
 
       realtimeClient.on('conversation.cleared', ({ conversationId }: { conversationId: string }) => {
@@ -705,6 +730,7 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
           onClose={() => setIsInviteModalOpen(false)}
           onGenerateInvite={handleGenerateInvite}
           existingInvites={invites}
+          inviteRequests={inviteRequests}
           onRevokeInvite={handleRevokeInvite}
         />
       )}

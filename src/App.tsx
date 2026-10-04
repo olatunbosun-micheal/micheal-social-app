@@ -5,6 +5,7 @@ import { GuestShell } from './components/guest/GuestShell';
 import { InviteLandingView } from './components/InviteLandingView';
 import { LandingPageView } from './components/LandingPageView';
 import { API_BASE } from './config';
+import './App.css';
 
 export const App: React.FC = () => {
   const [theme, setTheme] = useState<ThemeMode>(() => {

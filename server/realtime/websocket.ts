@@ -114,6 +114,15 @@ const handleSocketEvent = (ws: AuthenticatedSocket, message: { event: string; da
     }
   }
 
+  // Mark messages as read / seen
+  if (event === 'messages.read' || event === 'conversation.read') {
+    const { conversationId } = data as { conversationId: string };
+    const user = db.findUserById(ws.userId);
+    if (user && conversationId) {
+      chatService.markMessagesAsRead(conversationId, user);
+    }
+  }
+
   // WebRTC 1-on-1 Call Signaling (Audio & Video)
   if (
     event === 'call.start' ||

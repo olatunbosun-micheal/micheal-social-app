@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import type { Conversation, Message } from '../types';
 import {
-  Search,
   SlidersHorizontal,
   Image,
   Mic,
@@ -53,15 +52,9 @@ export const OwnerInbox: React.FC<OwnerInboxProps> = ({
     installApp,
     triggerNativePrompt,
   } = usePWAInstall();
-  const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'unread' | 'archived'>('all');
 
   const filteredConversations = conversations.filter((conv) => {
-    const matchesSearch =
-      conv.guestUser.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      conv.guestUser.email.toLowerCase().includes(searchQuery.toLowerCase());
-
-    if (!matchesSearch) return false;
 
     if (activeTab === 'unread') {
       return conv.unreadCount > 0;
@@ -118,19 +111,7 @@ export const OwnerInbox: React.FC<OwnerInboxProps> = ({
         </div>
       </div>
 
-      {/* Search Box */}
-      <div className="inbox-search-box">
-        <div className="search-input-wrapper">
-          <Search size={16} color="var(--text-muted)" />
-          <input
-            type="text"
-            className="search-input"
-            placeholder="Search or start new chat"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-      </div>
+
 
       {/* Filter Tabs */}
       <div className="inbox-tabs">
@@ -190,15 +171,9 @@ export const OwnerInbox: React.FC<OwnerInboxProps> = ({
                 onClick={() => onSelectConversation(conv.id)}
               >
                 <div className="avatar-container">
-                  {conv.guestUser.avatar ? (
-                    <img
-                      src={conv.guestUser.avatar}
-                      alt={conv.guestUser.name}
-                      className="avatar-img"
-                    />
-                  ) : (
-                    <div className="avatar-placeholder">{conv.guestUser.name[0]}</div>
-                  )}
+                  <div className="avatar-placeholder">
+                    {conv.guestUser.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                  </div>
                   {conv.guestUser.isOnline && <div className="online-indicator" />}
                 </div>
 

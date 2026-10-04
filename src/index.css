@@ -1142,18 +1142,57 @@ input, textarea {
   opacity: 0.7;
 }
 
-.message-status-pill {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  padding: 1px 4px;
-  border-radius: var(--radius-xs);
-  background: rgba(0, 0, 0, 0.2);
-  text-transform: uppercase;
+/* Real-time Message Status Checkmarks (Sending, Sent, Delivered, Seen / Read) */
+.status-check-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 3px;
+  vertical-align: middle;
+  line-height: 1;
+  cursor: default;
 }
 
-.message-status-pill.read {
-  color: var(--accent-secondary);
+.status-icon-sending {
+  color: var(--text-muted);
+  opacity: 0.65;
+  animation: clockPulse 1.5s ease-in-out infinite;
+}
+
+.status-icon-sent {
+  color: var(--text-muted);
+  opacity: 0.8;
+}
+
+.status-icon-delivered {
+  color: var(--text-muted);
+  opacity: 0.95;
+}
+
+/* Seen / Read: Vibrant WhatsApp / Telegram double blue ticks with crisp glow */
+.status-icon-read {
+  color: #38bdf8 !important;
+  filter: drop-shadow(0 0 2.5px rgba(56, 189, 248, 0.5));
+  animation: readPop 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes readPop {
+  0% {
+    transform: scale(0.65);
+    opacity: 0.4;
+  }
+  60% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes clockPulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
 }
 
 /* Floating Actions Bar (Hover) */
@@ -2468,14 +2507,57 @@ input, textarea {
   }
 }
 
-/* Call Modal on Mobile: Fullscreen native experience */
-@media (max-width: 640px) {
+/* Call Modal on Mobile: Fullscreen native responsive video & audio experience */
+@media (max-width: 768px) {
+  .call-overlay-backdrop {
+    padding: 0 !important;
+  }
+
   .call-modal-container {
-    width: 100% !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
     height: 100% !important;
+    height: 100dvh !important;
     max-height: 100dvh !important;
     border-radius: 0 !important;
     border: none !important;
+    margin: 0 !important;
+  }
+
+  .call-pip-preview {
+    width: 90px !important;
+    height: 128px !important;
+    top: 60px !important;
+    right: 12px !important;
+    border-radius: 12px !important;
+    border: 1.5px solid rgba(255, 255, 255, 0.25) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6) !important;
+  }
+
+  .call-answer-bar {
+    padding: 12px 14px 20px 14px !important;
+    gap: 10px !important;
+    flex-wrap: wrap !important;
+  }
+
+  .call-answer-bar button {
+    flex: 1 1 30% !important;
+    min-width: 80px !important;
+    padding: 12px 8px !important;
+    font-size: 12px !important;
+    justify-content: center !important;
+  }
+
+  .call-controls-bar {
+    padding: 14px 16px max(18px, env(safe-area-inset-bottom)) 16px !important;
+    gap: 12px !important;
+    justify-content: space-evenly !important;
+  }
+
+  .call-controls-bar button {
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 50% !important;
   }
 }
 

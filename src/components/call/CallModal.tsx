@@ -12,6 +12,7 @@ import {
   Volume2,
   VolumeX,
   Shield,
+  SwitchCamera,
 } from 'lucide-react';
 import { realtimeClient } from '../../services/realtimeClient';
 import { soundFX } from '../../services/soundEffects';
@@ -49,8 +50,10 @@ export const CallModal: React.FC<CallModalProps> = ({
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoEnabled, setIsVideoEnabled] = useState(session.isVideo);
   const [isCallWithVideo, setIsCallWithVideo] = useState(session.isVideo);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [isSpeakerMuted, setIsSpeakerMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [declineMessage, setDeclineMessage] = useState<string | null>(null);
@@ -653,19 +656,73 @@ export const CallModal: React.FC<CallModalProps> = ({
     }
   };
 
+  // Toggle Camera Facing Mode (Front / Rear for Mobile)
+  const toggleCameraFacing = async () => {
+    if (!isVideoEnabled) return;
+    const nextMode = facingMode === 'user' ? 'environment' : 'user';
+    setFacingMode(nextMode);
+    try {
+      let newStream: MediaStream;
+      try {
+        newStream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+          video: {
+            width: { ideal: 1280, max: 1920 },
+            height: { ideal: 720, max: 1080 },
+            facingMode: { exact: nextMode },
+          },
+        });
+      } catch {
+        newStream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: { facingMode: nextMode },
+        });
+      }
+
+      const newVideoTrack = newStream.getVideoTracks()[0];
+      if (newVideoTrack && pcRef.current) {
+        const senders = pcRef.current.getSenders();
+        const videoSender = senders.find((s) => s.track && s.track.kind === 'video');
+        if (videoSender) {
+          await videoSender.replaceTrack(newVideoTrack);
+        }
+      }
+
+      if (localStreamRef.current) {
+        const oldVideo = localStreamRef.current.getVideoTracks()[0];
+        if (oldVideo) {
+          oldVideo.stop();
+          localStreamRef.current.removeTrack(oldVideo);
+        }
+        if (newVideoTrack) {
+          localStreamRef.current.addTrack(newVideoTrack);
+        }
+      }
+
+      if (localVideoRef.current && newStream) {
+        localVideoRef.current.srcObject = newStream;
+      }
+    } catch (err) {
+      console.warn('Failed to switch camera:', err);
+    }
+  };
+
   return (
     <div
-      className={`call-overlay-backdrop ${isFullscreen ? 'fullscreen' : ''}`}
+      className={`call-overlay-backdrop ${isFullscreen ? 'fullscreen' : ''} ${isMinimized ? 'minimized' : ''}`}
       style={{
         position: 'fixed',
-        inset: 0,
+        inset: isMinimized ? 'auto' : 0,
+        bottom: isMinimized ? 24 : undefined,
+        right: isMinimized ? 24 : undefined,
         zIndex: 1000,
-        background: 'rgba(5, 7, 11, 0.94)',
-        backdropFilter: 'blur(16px)',
+        background: isMinimized ? 'transparent' : 'rgba(5, 7, 11, 0.94)',
+        backdropFilter: isMinimized ? 'none' : 'blur(16px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 16,
+        padding: isMinimized ? 0 : 16,
+        pointerEvents: isMinimized ? 'none' : 'auto',
       }}
     >
       {/* Hidden audio element for remote stream audio */}
@@ -674,18 +731,20 @@ export const CallModal: React.FC<CallModalProps> = ({
       <div
         className="call-modal-container"
         style={{
-          width: '100%',
-          maxWidth: isVideoLayout ? (isFullscreen ? '100vw' : '880px') : '420px',
-          height: isVideoLayout ? (isFullscreen ? '100vh' : '580px') : 'auto',
+          width: isMinimized ? '160px' : '100%',
+          maxWidth: isMinimized ? '160px' : (isVideoLayout ? (isFullscreen ? '100vw' : '880px') : '420px'),
+          height: isMinimized ? (isVideoLayout ? '120px' : 'auto') : (isVideoLayout ? (isFullscreen ? '100vh' : 'auto') : 'auto'),
+          maxHeight: isFullscreen && !isMinimized ? '100vh' : '90vh',
           background: 'var(--bg-modal)',
           border: '1px solid var(--border-strong)',
-          borderRadius: isFullscreen ? 0 : 'var(--radius-lg)',
+          borderRadius: isFullscreen && !isMinimized ? 0 : 'var(--radius-lg)',
           boxShadow: 'var(--shadow-lg)',
           display: 'flex',
           flexDirection: 'column',
           position: 'relative',
           overflow: 'hidden',
-          transition: 'all 0.2s ease',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          pointerEvents: 'auto',
         }}
       >
         {/* Top Header Bar */}
@@ -741,7 +800,17 @@ export const CallModal: React.FC<CallModalProps> = ({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {isVideoLayout && (
+            <button
+              className="icon-action-btn"
+              onClick={() => {
+                if (!isMinimized) setIsFullscreen(false);
+                setIsMinimized(!isMinimized);
+              }}
+              title={isMinimized ? 'Expand Call' : 'Minimize Call'}
+            >
+              {isMinimized ? <Maximize2 size={16} /> : <Minimize2 size={16} />}
+            </button>
+            {isVideoLayout && !isMinimized && (
               <button
                 className="icon-action-btn"
                 onClick={() => setIsFullscreen(!isFullscreen)}
@@ -802,12 +871,13 @@ export const CallModal: React.FC<CallModalProps> = ({
               {/* Local Video Picture-in-Picture Preview */}
               {isVideoEnabled && (
                 <div
+                  className="call-pip-preview"
                   style={{
                     position: 'absolute',
                     top: 16,
                     right: 16,
-                    width: 130,
-                    height: 98,
+                    width: isMinimized ? '40px' : '110px',
+                    height: isMinimized ? '40px' : '140px',
                     background: '#11141c',
                     border: '1.5px solid var(--border-strong)',
                     borderRadius: 'var(--radius-sm)',
@@ -825,9 +895,31 @@ export const CallModal: React.FC<CallModalProps> = ({
                       width: '100%',
                       height: '100%',
                       objectFit: 'cover',
-                      transform: 'scaleX(-1)', // Mirror effect
+                      transform: facingMode === 'user' ? 'scaleX(-1)' : 'none',
                     }}
                   />
+                  <button
+                    onClick={toggleCameraFacing}
+                    title="Flip camera (front / rear)"
+                    style={{
+                      position: 'absolute',
+                      bottom: 5,
+                      right: 5,
+                      width: 26,
+                      height: 26,
+                      borderRadius: '50%',
+                      background: 'rgba(0, 0, 0, 0.65)',
+                      border: '1px solid rgba(255, 255, 255, 0.25)',
+                      color: '#ffffff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      zIndex: 5,
+                    }}
+                  >
+                    <SwitchCamera size={13} />
+                  </button>
                 </div>
               )}
             </>
@@ -866,19 +958,6 @@ export const CallModal: React.FC<CallModalProps> = ({
                     }}
                   />
                 )}
-                {session.targetUser.avatar ? (
-                  <img
-                    src={session.targetUser.avatar}
-                    alt={session.targetUser.name}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      borderRadius: 'var(--radius-sm)',
-                      border: '1px solid var(--border-strong)',
-                    }}
-                  />
-                ) : (
                   <div
                     style={{
                       width: '100%',
@@ -893,9 +972,8 @@ export const CallModal: React.FC<CallModalProps> = ({
                       borderRadius: 'var(--radius-sm)',
                     }}
                   >
-                    {session.targetUser.name[0]}
+                    {session.targetUser.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
                   </div>
-                )}
               </div>
 
               <div
@@ -955,6 +1033,7 @@ export const CallModal: React.FC<CallModalProps> = ({
         {/* Incoming Call Answer/Decline Bar */}
         {session.direction === 'incoming' && callStatus === 'ringing' ? (
           <div
+            className="call-answer-bar"
             style={{
               padding: '16px 20px',
               background: 'var(--bg-surface)',
@@ -1048,14 +1127,15 @@ export const CallModal: React.FC<CallModalProps> = ({
         ) : (
           /* Active Call Controls Bar */
           <div
+            className="call-controls-bar"
             style={{
-              padding: '16px 24px',
+              padding: isMinimized ? '8px 12px' : '16px 24px',
               background: 'var(--bg-surface)',
               borderTop: '1px solid var(--border-subtle)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 16,
+              gap: isMinimized ? 8 : 16,
             }}
           >
             {/* Mute Mic Button */}
@@ -1063,8 +1143,8 @@ export const CallModal: React.FC<CallModalProps> = ({
               className="icon-action-btn"
               onClick={toggleMute}
               style={{
-                width: 44,
-                height: 44,
+                width: isMinimized ? 36 : 44,
+                height: isMinimized ? 36 : 44,
                 borderRadius: 'var(--radius-sm)',
                 background: isMuted ? 'rgba(239, 68, 68, 0.2)' : 'var(--bg-active)',
                 color: isMuted ? '#ef4444' : 'var(--text-primary)',
@@ -1080,8 +1160,8 @@ export const CallModal: React.FC<CallModalProps> = ({
               className="icon-action-btn"
               onClick={toggleVideo}
               style={{
-                width: 44,
-                height: 44,
+                width: isMinimized ? 36 : 44,
+                height: isMinimized ? 36 : 44,
                 borderRadius: 'var(--radius-sm)',
                 background: !isVideoEnabled ? 'rgba(239, 68, 68, 0.2)' : 'var(--bg-active)',
                 color: !isVideoEnabled ? '#ef4444' : 'var(--text-primary)',
@@ -1092,13 +1172,32 @@ export const CallModal: React.FC<CallModalProps> = ({
               {isVideoEnabled ? <VideoIcon size={19} /> : <VideoOff size={19} />}
             </button>
 
+            {/* Flip Camera Button (Front / Rear) */}
+            {isVideoEnabled && !isMinimized && (
+              <button
+                className="icon-action-btn"
+                onClick={toggleCameraFacing}
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'var(--bg-active)',
+                  color: 'var(--text-primary)',
+                  border: '1px solid var(--border-strong)',
+                }}
+                title="Flip camera (front / rear)"
+              >
+                <SwitchCamera size={19} />
+              </button>
+            )}
+
             {/* Toggle Speaker Button */}
             <button
               className="icon-action-btn"
               onClick={toggleSpeaker}
               style={{
-                width: 44,
-                height: 44,
+                width: isMinimized ? 36 : 44,
+                height: isMinimized ? 36 : 44,
                 borderRadius: 'var(--radius-sm)',
                 background: isSpeakerMuted ? 'rgba(239, 68, 68, 0.2)' : 'var(--bg-active)',
                 color: isSpeakerMuted ? '#ef4444' : 'var(--text-primary)',
@@ -1113,8 +1212,8 @@ export const CallModal: React.FC<CallModalProps> = ({
             <button
               onClick={handleEndCall}
               style={{
-                width: 44,
-                height: 44,
+                width: isMinimized ? 36 : 44,
+                height: isMinimized ? 36 : 44,
                 borderRadius: 'var(--radius-sm)',
                 background: '#ef4444',
                 color: '#ffffff',
