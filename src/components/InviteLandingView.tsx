@@ -26,7 +26,7 @@ export const InviteLandingView: React.FC<InviteLandingViewProps> = ({
     note?: string;
   } | null>(null);
 
-  const [step, setStep] = useState<'welcome' | 'register'>('welcome');
+  const [step, setStep] = useState<'welcome' | 'register' | 'login'>('welcome');
   const [name, setName] = useState('');
   const [gender, setGender] = useState<'male' | 'female'>('male');
   const [email, setEmail] = useState('');
@@ -85,6 +85,30 @@ export const InviteLandingView: React.FC<InviteLandingViewProps> = ({
     }
   };
 
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Login failed');
+      if (data.token) localStorage.setItem('gateway_token', data.token);
+      onSuccess(data.user, '');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Invalid email or password');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="land-screen">
@@ -114,7 +138,20 @@ export const InviteLandingView: React.FC<InviteLandingViewProps> = ({
             </div>
             <p className="land-sub">{error}</p>
           </div>
-          <button className="land-secondary-btn" onClick={onGoHome}>Return to Gateway</button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', marginTop: 12 }}>
+            <button
+              className="land-primary-btn"
+              onClick={() => {
+                setError(null);
+                setInviteMeta({ ownerName: 'Micheal' });
+                setStep('login');
+              }}
+            >
+              <span>Already created account? Sign In</span>
+              <ArrowRight size={15} />
+            </button>
+            <button className="land-secondary-btn" onClick={onGoHome}>Return to Gateway</button>
+          </div>
         </div>
       </div>
     );
@@ -165,12 +202,107 @@ export const InviteLandingView: React.FC<InviteLandingViewProps> = ({
 
           <div className="land-divider" />
 
-          <button
-            className="land-primary-btn"
-            onClick={() => setStep('register')}
-          >
-            <span>Create account &amp; open chat</span>
-            <ArrowRight size={15} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
+            <button
+              className="land-primary-btn"
+              onClick={() => { setStep('register'); setError(null); }}
+            >
+              <span>Create account &amp; open chat</span>
+              <ArrowRight size={15} />
+            </button>
+
+            <button
+              type="button"
+              className="land-ghost-btn"
+              style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-secondary)' }}
+              onClick={() => { setStep('login'); setError(null); }}
+            >
+              <span>Already created your account? <strong style={{ color: 'var(--accent-primary)' }}>Log In here</strong></span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === 'login') {
+    return (
+      <div className="land-screen">
+        <div className="land-panel">
+          <div className="land-logo-row">
+            <div className="land-logo-mark"><Shield size={16} strokeWidth={2} /></div>
+            <span className="land-logo-name">Gateway</span>
+          </div>
+
+          <div className="land-heading-block">
+            <h1 className="land-h1">Sign in to your account</h1>
+            <p className="land-sub">Log in with the credentials you created to resume chatting with {ownerName}.</p>
+          </div>
+
+          {error && <div className="land-error-bar">{error}</div>}
+
+          <form className="land-form" onSubmit={handleLogin}>
+            <div className="land-field">
+              <label className="land-label">Email</label>
+              <div className="land-input-row">
+                <Mail size={14} className="land-input-icon" />
+                <input
+                  type="email"
+                  required
+                  className="land-input"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                />
+              </div>
+            </div>
+
+            <div className="land-field">
+              <label className="land-label">Password</label>
+              <div className="land-input-row">
+                <Lock size={14} className="land-input-icon" />
+                <input
+                  type="password"
+                  required
+                  className="land-input"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                />
+              </div>
+            </div>
+
+            <button type="submit" disabled={isSubmitting} className="land-primary-btn">
+              {isSubmitting ? 'Signing in...' : 'Sign In'}
+              <ArrowRight size={15} />
+            </button>
+          </form>
+
+          <div style={{ marginTop: 16, textAlign: 'center', fontSize: 13, color: 'var(--text-secondary)' }}>
+            Need to register instead?{' '}
+            <button
+              type="button"
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--accent-primary)',
+                cursor: 'pointer',
+                fontWeight: 600,
+                padding: 0,
+              }}
+              onClick={() => {
+                setStep('register');
+                setError(null);
+              }}
+            >
+              Register
+            </button>
+          </div>
+
+          <button className="land-ghost-btn" onClick={() => setStep('welcome')}>
+            Back
           </button>
         </div>
       </div>
@@ -292,6 +424,27 @@ export const InviteLandingView: React.FC<InviteLandingViewProps> = ({
             <ArrowRight size={15} />
           </button>
         </form>
+
+        <div style={{ marginTop: 16, textAlign: 'center', fontSize: 13, color: 'var(--text-secondary)' }}>
+          Already created your account?{' '}
+          <button
+            type="button"
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--accent-primary)',
+              cursor: 'pointer',
+              fontWeight: 600,
+              padding: 0,
+            }}
+            onClick={() => {
+              setStep('login');
+              setError(null);
+            }}
+          >
+            Log In
+          </button>
+        </div>
 
         <button className="land-ghost-btn" onClick={() => setStep('welcome')}>
           Back
