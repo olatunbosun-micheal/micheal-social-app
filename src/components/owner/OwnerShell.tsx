@@ -296,6 +296,7 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
     note?: string;
     maxUses: number;
     expiresInHours?: number | null;
+    appUrl?: string;
   }): Promise<InviteData> => {
     const res = await fetch(`${API_BASE}/invites`, {
       method: 'POST',

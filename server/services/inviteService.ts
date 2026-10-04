@@ -22,6 +22,7 @@ export class InviteService {
     createdById: string;
     maxUses?: number; // 1 for single-use, 0 for unlimited
     expiresInHours?: number | null; // null for never
+    appUrl?: string;
   }): Promise<InviteRecord & { qrCodeSvg: string }> {
     let code = this.generateCode(7);
     while (db.findInviteByCode(code)) {
@@ -51,7 +52,7 @@ export class InviteService {
     db.createInvite(invite);
 
     // Generate QR Code data URL
-    const appUrl = process.env.APP_URL || 'http://localhost:5173';
+    const appUrl = params.appUrl || process.env.APP_URL || 'http://localhost:5173';
     const inviteUrl = `${appUrl}/invite/${code}`;
     const qrCodeSvg = await QRCode.toDataURL(inviteUrl, {
       margin: 1,

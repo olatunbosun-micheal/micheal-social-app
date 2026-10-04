@@ -24,7 +24,7 @@ export interface InviteRequestData {
 interface InviteModalProps {
   ownerName: string;
   onClose: () => void;
-  onGenerateInvite: (params: { recipientName?: string; note?: string; maxUses: number; expiresInHours?: number | null }) => Promise<InviteData>;
+  onGenerateInvite: (params: { recipientName?: string; note?: string; maxUses: number; expiresInHours?: number | null; appUrl?: string }) => Promise<InviteData>;
   existingInvites: InviteData[];
   inviteRequests: InviteRequestData[];
   onRevokeInvite: (id: string) => void;
@@ -56,6 +56,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
         note: note.trim() || undefined,
         maxUses: isSingleUse ? 1 : 0,
         expiresInHours: expiryHours,
+        appUrl: window.location.origin,
       });
       setCreatedInvite(invite);
     } catch {

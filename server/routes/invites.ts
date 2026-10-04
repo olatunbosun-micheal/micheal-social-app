@@ -13,6 +13,7 @@ const CreateInviteSchema = z.object({
   note: z.string().optional(),
   maxUses: z.number().int().min(0).default(1),
   expiresInHours: z.number().nullable().optional(),
+  appUrl: z.string().optional(),
 });
 
 // Create Invitation (Owner Only)
