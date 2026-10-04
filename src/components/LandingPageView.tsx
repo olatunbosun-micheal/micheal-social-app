@@ -195,17 +195,20 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
             {tab === 'signin' ? (
               <form className="land-form" onSubmit={handleLogin}>
                 <div className="land-field">
-                  <label className="land-label">Account Email</label>
+                  <label className="land-label">Email or Username</label>
                   <div className="land-input-row">
                     <Mail size={14} className="land-input-icon" />
                     <input
-                      type="email"
+                      type="text"
                       required
                       className="land-input"
-                      placeholder="micheal@gateway.internal"
+                      placeholder="kilogbede19@gmail.com or micheal"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       autoComplete="username"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck="false"
                     />
                   </div>
                 </div>
@@ -218,10 +221,13 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                       type="password"
                       required
                       className="land-input"
-                      placeholder="••••••••••••"
+                      placeholder="Enter password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       autoComplete="current-password"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck="false"
                     />
                   </div>
                 </div>

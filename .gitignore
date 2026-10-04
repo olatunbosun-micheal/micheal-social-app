@@ -17,8 +17,6 @@ dist-ssr
 .env*.local
 
 # Local Data & Media
-data/*.json
-!data/.gitkeep
 uploads/*
 !uploads/.gitkeep
 

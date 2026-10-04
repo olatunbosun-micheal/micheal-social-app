@@ -30,11 +30,9 @@ class DatabaseEngine {
       } catch (e) {
         console.error('Failed to load existing DB file, creating fresh seed...', e);
         this.seed();
-        return;
       }
     } else {
       this.seed();
-      return;
     }
 
     // Ensure system owner always matches configured credentials on every startup

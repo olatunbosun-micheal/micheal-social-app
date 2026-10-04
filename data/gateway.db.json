@@ -1,0 +1,221 @@
+{
+  "users": [
+    {
+      "id": "user_micheal",
+      "name": "Micheal",
+      "email": "kilogbede19@gmail.com",
+      "passwordHash": "$2b$10$rTceOMK7vzOhcafWmi3kbei1zrfFt2ZvWijDO.VGavI.8aP.5Q2Qi",
+      "role": "owner",
+      "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
+      "statusMessage": "Available for private 1-on-1 briefings & discussions",
+      "isBlocked": false,
+      "isOnline": true,
+      "lastSeen": "online",
+      "createdAt": "2026-10-03T22:45:22.303Z",
+      "updatedAt": "2026-10-04T03:19:12.979Z"
+    },
+    {
+      "id": "user_1791068230528_3kdy2",
+      "name": "Amoo Quadri",
+      "email": "amoo@gmail.com",
+      "passwordHash": "$2b$10$HLGTqBQTSzaBIH.fUVYetOxUIJrpz2zNQfQidNm7sjl92F8zhQxV6",
+      "role": "guest",
+      "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80",
+      "statusMessage": "Joined via personal invitation",
+      "isBlocked": false,
+      "isOnline": false,
+      "lastSeen": "2026-10-03T23:55:01.639Z",
+      "createdAt": "2026-10-03T22:57:10.528Z",
+      "updatedAt": "2026-10-03T23:55:01.639Z"
+    }
+  ],
+  "invites": [
+    {
+      "id": "inv_1791068203747_bd5246",
+      "code": "XK5S7MJ",
+      "recipientName": "Amoo Quadri",
+      "note": "Hi My Brother",
+      "createdById": "user_micheal",
+      "maxUses": 1,
+      "usedCount": 1,
+      "isRevoked": true,
+      "expiresAt": "2026-10-04T22:56:43.747Z",
+      "createdAt": "2026-10-03T22:56:43.747Z",
+      "usedByUserIds": [
+        "user_1791068230528_3kdy2"
+      ]
+    }
+  ],
+  "conversations": [
+    {
+      "id": "conv_user_1791068230528_3kdy2",
+      "guestId": "user_1791068230528_3kdy2",
+      "ownerId": "user_micheal",
+      "unreadCountOwner": 0,
+      "unreadCountGuest": 0,
+      "isArchived": false,
+      "isPinned": false,
+      "lastMessageAt": "2026-10-03T23:16:32.403Z",
+      "createdAt": "2026-10-03T22:57:10.531Z",
+      "updatedAt": "2026-10-03T23:55:00.632Z"
+    }
+  ],
+  "messages": [
+    {
+      "id": "msg_welcome_1791068230534",
+      "conversationId": "conv_user_1791068230528_3kdy2",
+      "senderId": "user_micheal",
+      "type": "text",
+      "content": "Welcome to Gateway, Amoo Quadri! This is your private direct channel with Micheal.",
+      "status": "read",
+      "reactions": [
+        {
+          "emoji": "👍",
+          "userId": "user_micheal",
+          "userName": "Micheal",
+          "createdAt": "2026-10-03T22:57:10.531Z"
+        }
+      ],
+      "isEdited": false,
+      "isDeletedForEveryone": false,
+      "deletedForUserIds": [],
+      "createdAt": "2026-10-03T22:57:10.531Z",
+      "updatedAt": "2026-10-03T22:57:10.531Z"
+    },
+    {
+      "id": "msg_1791068242709_5a1b",
+      "conversationId": "conv_user_1791068230528_3kdy2",
+      "senderId": "user_1791068230528_3kdy2",
+      "type": "text",
+      "content": "HI",
+      "status": "sent",
+      "reactions": [],
+      "isEdited": false,
+      "isDeletedForEveryone": false,
+      "deletedForUserIds": [],
+      "createdAt": "2026-10-03T22:57:22.709Z",
+      "updatedAt": "2026-10-03T22:57:22.709Z"
+    },
+    {
+      "id": "msg_1791068281643_dmj5",
+      "conversationId": "conv_user_1791068230528_3kdy2",
+      "senderId": "user_micheal",
+      "type": "text",
+      "content": "Wagwan Brother;How your side?",
+      "status": "sent",
+      "reactions": [],
+      "isEdited": false,
+      "isDeletedForEveryone": false,
+      "deletedForUserIds": [],
+      "createdAt": "2026-10-03T22:58:01.643Z",
+      "updatedAt": "2026-10-03T22:58:01.643Z"
+    },
+    {
+      "id": "msg_1791068293129_h7an",
+      "conversationId": "conv_user_1791068230528_3kdy2",
+      "senderId": "user_1791068230528_3kdy2",
+      "type": "text",
+      "content": "Fine my Skii, we dey push jarey",
+      "status": "sent",
+      "reactions": [],
+      "isEdited": false,
+      "isDeletedForEveryone": false,
+      "deletedForUserIds": [],
+      "createdAt": "2026-10-03T22:58:13.129Z",
+      "updatedAt": "2026-10-03T22:58:13.129Z"
+    },
+    {
+      "id": "msg_1791068355451_bpx2",
+      "conversationId": "conv_user_1791068230528_3kdy2",
+      "senderId": "user_micheal",
+      "type": "text",
+      "content": "thank yu bri",
+      "status": "sent",
+      "reactions": [],
+      "isEdited": false,
+      "isDeletedForEveryone": false,
+      "deletedForUserIds": [],
+      "createdAt": "2026-10-03T22:59:15.451Z",
+      "updatedAt": "2026-10-03T22:59:15.451Z"
+    },
+    {
+      "id": "msg_1791068832417_4wnu",
+      "conversationId": "conv_user_1791068230528_3kdy2",
+      "senderId": "user_micheal",
+      "type": "file",
+      "content": "test_test.txt",
+      "attachments": [
+        {
+          "id": "att_test",
+          "type": "file",
+          "url": "/api/media/files/test.txt",
+          "fileName": "test_test.txt",
+          "fileSize": 100
+        }
+      ],
+      "status": "sent",
+      "reactions": [],
+      "isEdited": false,
+      "isDeletedForEveryone": false,
+      "deletedForUserIds": [],
+      "createdAt": "2026-10-03T23:07:12.417Z",
+      "updatedAt": "2026-10-03T23:07:12.417Z"
+    },
+    {
+      "id": "msg_1791069281477_j668",
+      "conversationId": "conv_user_1791068230528_3kdy2",
+      "senderId": "user_micheal",
+      "type": "text",
+      "content": "hi brother",
+      "status": "sent",
+      "reactions": [],
+      "isEdited": false,
+      "isDeletedForEveryone": false,
+      "deletedForUserIds": [],
+      "createdAt": "2026-10-03T23:14:41.477Z",
+      "updatedAt": "2026-10-03T23:14:41.477Z"
+    },
+    {
+      "id": "msg_1791069299189_3zr8",
+      "conversationId": "conv_user_1791068230528_3kdy2",
+      "senderId": "user_micheal",
+      "type": "text",
+      "content": "Wagwan",
+      "status": "sent",
+      "reactions": [],
+      "isEdited": false,
+      "isDeletedForEveryone": false,
+      "deletedForUserIds": [],
+      "createdAt": "2026-10-03T23:14:59.189Z",
+      "updatedAt": "2026-10-03T23:14:59.189Z"
+    },
+    {
+      "id": "msg_1791069307789_c5vr",
+      "conversationId": "conv_user_1791068230528_3kdy2",
+      "senderId": "user_1791068230528_3kdy2",
+      "type": "text",
+      "content": "i dey jarey wbu?",
+      "status": "sent",
+      "reactions": [],
+      "isEdited": false,
+      "isDeletedForEveryone": false,
+      "deletedForUserIds": [],
+      "createdAt": "2026-10-03T23:15:07.789Z",
+      "updatedAt": "2026-10-03T23:15:07.789Z"
+    },
+    {
+      "id": "msg_1791069392403_nd0b",
+      "conversationId": "conv_user_1791068230528_3kdy2",
+      "senderId": "user_1791068230528_3kdy2",
+      "type": "text",
+      "content": "hi",
+      "status": "sent",
+      "reactions": [],
+      "isEdited": false,
+      "isDeletedForEveryone": false,
+      "deletedForUserIds": [],
+      "createdAt": "2026-10-03T23:16:32.403Z",
+      "updatedAt": "2026-10-03T23:16:32.403Z"
+    }
+  ]
+}

