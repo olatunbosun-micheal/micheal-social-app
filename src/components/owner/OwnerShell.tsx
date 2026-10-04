@@ -65,9 +65,13 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
         const data = await res.json();
         if (data.conversations) {
           setConversations(data.conversations);
-          if (data.conversations.length > 0 && !activeConversationId) {
-            setActiveConversationId(data.conversations[0].id);
-          }
+          setActiveConversationId((prev) => {
+            // Keep currently viewed conversation if it exists in the list
+            if (prev && data.conversations.some((c: any) => c.id === prev)) {
+              return prev;
+            }
+            return data.conversations.length > 0 ? data.conversations[0].id : '';
+          });
         }
       }
     } catch (err) {
@@ -179,14 +183,16 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
   // When active conversation changes, fetch its messages and join room
   useEffect(() => {
     if (activeConversationId) {
+      activeConversationIdRef.current = activeConversationId;
       realtimeClient.joinConversation(activeConversationId);
       fetchMessagesForConv(activeConversationId);
     }
   }, [activeConversationId]);
 
-  const activeConversation = conversations.find((c) => c.id === activeConversationId) || conversations[0] || null;
+  const activeConversation = conversations.find((c) => c.id === activeConversationId) || (conversations.length > 0 ? conversations[0] : null);
+  const activeId = activeConversation?.id || activeConversationId;
   const contactUser = activeConversation ? activeConversation.guestUser : null;
-  const currentMessages = activeConversationId ? (messages[activeConversationId] || []) : [];
+  const currentMessages = activeId ? (messages[activeId] || []) : [];
   const isContactTyping = contactUser ? !!typingUsers[contactUser.id] : false;
 
   // Generate Invite
@@ -231,17 +237,17 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
 
   // Start WebRTC Call (Audio or Video)
   const handleStartCall = (isVideo: boolean) => {
-    if (!contactUser || !activeConversationId) return;
+    if (!contactUser || !activeId) return;
     setCallSession({
       targetUser: contactUser,
-      conversationId: activeConversationId,
+      conversationId: activeId,
       isVideo,
       direction: 'outgoing',
       status: 'calling',
     });
     realtimeClient.initiateCall({
       targetUserId: contactUser.id,
-      conversationId: activeConversationId,
+      conversationId: activeId,
       isVideo,
       callerName: ownerUser.name,
       callerAvatar: ownerUser.avatar,
@@ -254,12 +260,12 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
     type: 'text' | 'image' | 'video' | 'file' | 'audio' = 'text',
     fileData?: { url: string; fileName: string; fileSize: number; duration?: number }
   ) => {
-    if (!activeConversationId) return;
+    if (!activeId) return;
 
     const tempId = `msg_${Date.now()}`;
     const optimisticMessage: Message = {
       id: tempId,
-      conversationId: activeConversationId,
+      conversationId: activeId,
       senderId: ownerUser.id,
       type,
       content: content.trim(),
@@ -291,13 +297,13 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
 
     setMessages((prev) => ({
       ...prev,
-      [activeConversationId]: [...(prev[activeConversationId] || []), optimisticMessage],
+      [activeId]: [...(prev[activeId] || []), optimisticMessage],
     }));
     setReplyTo(null);
 
     if (token) {
       try {
-        const res = await fetch(`${API_BASE}/conversations/${activeConversationId}/messages`, {
+        const res = await fetch(`${API_BASE}/conversations/${activeId}/messages`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -315,7 +321,7 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
           const data = await res.json();
           setMessages((prev) => ({
             ...prev,
-            [activeConversationId]: prev[activeConversationId]?.map((m) =>
+            [activeId]: prev[activeId]?.map((m) =>
               m.id === tempId ? data.message : m
             ) || [],
           }));
@@ -327,7 +333,7 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
   };
 
   const handleReact = async (messageId: string, emoji: string) => {
-    if (!token) return;
+    if (!token || !activeId) return;
     try {
       const res = await fetch(`${API_BASE}/messages/${messageId}/reactions`, {
         method: 'POST',
@@ -341,7 +347,7 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
         const data = await res.json();
         setMessages((prev) => ({
           ...prev,
-          [activeConversationId]: prev[activeConversationId]?.map((m) =>
+          [activeId]: prev[activeId]?.map((m) =>
             m.id === messageId ? data.message : m
           ) || [],
         }));
@@ -394,13 +400,16 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
         {showSidebar && (
           <OwnerInbox
             conversations={conversations}
-            activeConversationId={activeConversationId}
+            activeConversationId={activeId}
             onSelectConversation={(id) => {
               setActiveConversationId(id);
+              activeConversationIdRef.current = id;
+              setReplyTo(null);
               setConversations((prev) =>
                 prev.map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c))
               );
               setMobileView('chat');
+              fetchMessagesForConv(id);
             }}
             lastMessages={Object.fromEntries(
               conversations.map((c) => [c.id, messages[c.id]?.[messages[c.id]?.length - 1]])
@@ -426,6 +435,7 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
               />
 
               <MessageList
+                key={activeId}
                 messages={currentMessages}
                 currentUser={ownerUser}
                 contactUser={contactUser}
@@ -449,17 +459,18 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
               />
 
               <MessageComposer
+                key={activeId}
                 onSendMessage={handleSendMessage}
                 replyTo={replyTo}
                 onClearReply={() => setReplyTo(null)}
                 onTypingStart={() => {
-                  if (activeConversationId) {
-                    realtimeClient.sendTyping(activeConversationId, true);
+                  if (activeId) {
+                    realtimeClient.sendTyping(activeId, true);
                   }
                 }}
                 onTypingStop={() => {
-                  if (activeConversationId) {
-                    realtimeClient.sendTyping(activeConversationId, false);
+                  if (activeId) {
+                    realtimeClient.sendTyping(activeId, false);
                   }
                 }}
                 isOtherPartyBlocked={false}
