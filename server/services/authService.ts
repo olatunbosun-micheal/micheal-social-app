@@ -45,6 +45,9 @@ export class AuthService {
     const avatarPool = gender === 'female' ? FEMALE_AVATARS : MALE_AVATARS;
     const selectedAvatar = (params as any).avatar || avatarPool[Math.floor(Math.random() * avatarPool.length)];
 
+    const passwordHash = await bcrypt.hash(password, 10);
+    const now = new Date().toISOString();
+
     const newUser: UserRecord = {
       id: `user_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       name: name.trim(),
