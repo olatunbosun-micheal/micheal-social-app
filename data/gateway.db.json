@@ -4,7 +4,7 @@
       "id": "user_micheal",
       "name": "Micheal",
       "email": "kilogbede19@gmail.com",
-      "passwordHash": "$2b$10$qsUxIa6VKaT0ULds7O0Kv.PsZa5knTKUyBkM6j4bkjUadr3.3Rqhu",
+      "passwordHash": "$2b$10$ArXLVb5o6PBnJPXpUjQLuu/cqlVbUihW3bLcdxYOqBXx02t71LLU2",
       "role": "owner",
       "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
       "statusMessage": "Available for private 1-on-1 briefings & discussions",
@@ -12,7 +12,7 @@
       "isOnline": true,
       "lastSeen": "online",
       "createdAt": "2026-10-03T22:45:22.303Z",
-      "updatedAt": "2026-10-04T03:26:14.100Z"
+      "updatedAt": "2026-10-04T03:30:07.081Z"
     },
     {
       "id": "user_1791068230528_3kdy2",
@@ -23,10 +23,10 @@
       "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80",
       "statusMessage": "Joined via personal invitation",
       "isBlocked": false,
-      "isOnline": true,
-      "lastSeen": "online",
+      "isOnline": false,
+      "lastSeen": "2026-10-04T03:29:28.799Z",
       "createdAt": "2026-10-03T22:57:10.528Z",
-      "updatedAt": "2026-10-04T03:21:38.845Z"
+      "updatedAt": "2026-10-04T03:29:28.799Z"
     }
   ],
   "invites": [
@@ -57,7 +57,7 @@
       "isPinned": false,
       "lastMessageAt": "2026-10-03T23:16:32.403Z",
       "createdAt": "2026-10-03T22:57:10.531Z",
-      "updatedAt": "2026-10-04T03:28:24.925Z"
+      "updatedAt": "2026-10-04T03:30:46.577Z"
     }
   ],
   "messages": [
