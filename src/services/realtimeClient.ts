@@ -6,17 +6,40 @@ class RealtimeClient {
   private socket: WebSocket | null = null;
   private listeners: Map<string, Set<EventCallback>> = new Map();
   private token: string | null = null;
+  private currentUserId: string | null = null;
   private reconnectTimer: any = null;
   private activeRoom: string | null = null;
 
-  public init(token: string) {
+  public setCurrentUserId(userId: string) {
+    this.currentUserId = userId;
+  }
+
+  public getCurrentUserId(): string | null {
+    return this.currentUserId;
+  }
+
+  public init(token: string, currentUserId?: string) {
     this.token = token;
+    if (currentUserId) {
+      this.currentUserId = currentUserId;
+    } else {
+      try {
+        const parts = token.split('.');
+        if (parts.length === 3) {
+          const payload = JSON.parse(atob(parts[1]));
+          if (payload?.userId) this.currentUserId = payload.userId;
+        }
+      } catch {
+        // ignore
+      }
+    }
     this.connect();
     this.requestNotificationPermission();
   }
 
-  public setToken(token: string) {
+  public setToken(token: string, currentUserId?: string) {
     this.token = token;
+    if (currentUserId) this.currentUserId = currentUserId;
     if (this.socket) {
       this.socket.close();
     }
@@ -69,14 +92,25 @@ class RealtimeClient {
             this.emit('call.accepted', parsed.data);
           }
 
-          // Handle notifications
+          // Handle notifications ONLY for messages from the other user (not own messages)
           if (parsed.event === 'message.created') {
-            soundFX.playReceive();
-            this.showPushNotification(parsed.data);
+            const msg = parsed.data;
+            const isOwnMessage = this.currentUserId && msg && msg.senderId === this.currentUserId;
+
+            if (!isOwnMessage) {
+              soundFX.playReceive();
+              this.showPushNotification(msg);
+            }
           }
 
+          // Handle call notifications ONLY for incoming calls (not outgoing initiated by self)
           if (parsed.event === 'call.start') {
-            this.showCallNotification(parsed.data);
+            const callData = parsed.data;
+            const isCaller = this.currentUserId && callData && callData.fromUserId === this.currentUserId;
+
+            if (!isCaller) {
+              this.showCallNotification(callData);
+            }
           }
         } catch (e) {
           console.error('[Realtime] Message parse error:', e);

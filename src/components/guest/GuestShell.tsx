@@ -107,7 +107,7 @@ export const GuestShell: React.FC<GuestShellProps> = ({
     fetchConversationData();
 
     if (token) {
-      realtimeClient.init(token);
+      realtimeClient.init(token, currentUser.id);
 
       realtimeClient.on('message.created', (newMsg: Message) => {
         setMessages((prev) => {

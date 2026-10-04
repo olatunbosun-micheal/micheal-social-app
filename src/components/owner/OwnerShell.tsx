@@ -120,7 +120,7 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
     fetchInvites();
 
     if (token) {
-      realtimeClient.init(token);
+      realtimeClient.init(token, ownerUser.id);
 
       realtimeClient.on('message.created', (newMsg: Message) => {
         setMessages((prev) => {
