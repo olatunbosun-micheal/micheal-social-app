@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { Conversation, Message } from '../types';
-import { Search, SlidersHorizontal, Image, Mic, FileText, Pin, UserPlus, Download } from 'lucide-react';
+import { Search, SlidersHorizontal, Image, Mic, FileText, Pin, UserPlus, Download, Phone, Video } from 'lucide-react';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { PWAInstallModal } from './PWAInstallModal';
 
@@ -197,7 +197,12 @@ export const OwnerInbox: React.FC<OwnerInboxProps> = ({
                           {lastMsg.type === 'image' && <Image size={13} style={{ marginRight: 2 }} />}
                           {lastMsg.type === 'audio' && <Mic size={13} style={{ marginRight: 2 }} />}
                           {lastMsg.type === 'file' && <FileText size={13} style={{ marginRight: 2 }} />}
-                          <span>{lastMsg.content}</span>
+                          {lastMsg.type === 'call' && (lastMsg.callLog?.callType === 'video' ? <Video size={13} style={{ marginRight: 2 }} /> : <Phone size={13} style={{ marginRight: 2 }} />)}
+                          <span>
+                            {lastMsg.type === 'call'
+                              ? `${lastMsg.callLog?.callType === 'video' ? 'Video call' : 'Voice call'} ${lastMsg.callLog?.duration ? `(${Math.floor(lastMsg.callLog.duration / 60)}m ${lastMsg.callLog.duration % 60}s)` : lastMsg.callLog?.status === 'missed' ? '(Missed)' : ''}`
+                              : lastMsg.content}
+                          </span>
                         </>
                       ) : (
                         <span>No messages yet</span>

@@ -6,7 +6,7 @@ import { authenticateJWT, AuthenticatedRequest } from '../middleware/auth.js';
 const router = Router();
 
 const SendMessageSchema = z.object({
-  type: z.enum(['text', 'image', 'video', 'audio', 'file', 'system']).default('text'),
+  type: z.enum(['text', 'image', 'video', 'audio', 'file', 'system', 'call']).default('text'),
   content: z.string().default(''),
   attachments: z.array(z.object({
     id: z.string(),
@@ -18,9 +18,15 @@ const SendMessageSchema = z.object({
     duration: z.number().optional(),
   })).optional(),
   replyToId: z.string().optional(),
+  clientTempId: z.string().optional(),
+  callLog: z.object({
+    callType: z.enum(['audio', 'video']),
+    status: z.enum(['completed', 'missed', 'declined', 'cancelled']),
+    duration: z.number().default(0),
+  }).optional(),
 }).refine(
-  (data) => (data.content && data.content.trim().length > 0) || (data.attachments && data.attachments.length > 0),
-  { message: 'Message must have content or at least one attachment' }
+  (data) => (data.content && data.content.trim().length > 0) || (data.attachments && data.attachments.length > 0) || data.callLog !== undefined || data.type === 'call',
+  { message: 'Message must have content, an attachment, or call information' }
 );
 
 // List conversations visible to authenticated user

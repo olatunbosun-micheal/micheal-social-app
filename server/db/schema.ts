@@ -59,11 +59,17 @@ export interface MessageReactionRecord {
   createdAt: string;
 }
 
+export interface MessageCallLogRecord {
+  callType: 'audio' | 'video';
+  status: 'completed' | 'missed' | 'declined' | 'cancelled';
+  duration: number; // in seconds
+}
+
 export interface MessageRecord {
   id: string;
   conversationId: string;
   senderId: string;
-  type: 'text' | 'image' | 'video' | 'audio' | 'file' | 'system';
+  type: 'text' | 'image' | 'video' | 'audio' | 'file' | 'system' | 'call';
   content: string;
   attachments?: MessageAttachmentRecord[];
   replyTo?: {
@@ -73,6 +79,8 @@ export interface MessageRecord {
     content: string;
     type: string;
   };
+  callLog?: MessageCallLogRecord;
+  clientTempId?: string;
   status: 'sending' | 'sent' | 'delivered' | 'read';
   reactions: MessageReactionRecord[];
   isEdited: boolean;

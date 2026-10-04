@@ -60,7 +60,7 @@ export class ChatService {
   public sendMessage(params: {
     conversationId: string;
     sender: UserRecord;
-    type?: 'text' | 'image' | 'video' | 'audio' | 'file' | 'system';
+    type?: 'text' | 'image' | 'video' | 'audio' | 'file' | 'system' | 'call';
     content: string;
     attachments?: Array<{
       id: string;
@@ -72,8 +72,14 @@ export class ChatService {
       duration?: number;
     }>;
     replyToId?: string;
+    clientTempId?: string;
+    callLog?: {
+      callType: 'audio' | 'video';
+      status: 'completed' | 'missed' | 'declined' | 'cancelled';
+      duration: number;
+    };
   }): MessageRecord {
-    const { conversationId, sender, type = 'text', content, attachments, replyToId } = params;
+    const { conversationId, sender, type = 'text', content, attachments, replyToId, clientTempId, callLog } = params;
 
     const conv = assertConversationAccess(conversationId, sender);
     if (!conv) {
@@ -108,6 +114,8 @@ export class ChatService {
       content: content.trim(),
       attachments,
       replyTo: replyToContext,
+      callLog,
+      clientTempId,
       status: 'sent',
       reactions: [],
       isEdited: false,

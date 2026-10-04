@@ -126,6 +126,32 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
         setMessages((prev) => {
           const list = prev[newMsg.conversationId] || [];
           if (list.some((m) => m.id === newMsg.id)) return prev;
+
+          // If this is an optimistic message matching clientTempId:
+          if (newMsg.clientTempId && list.some((m) => m.id === newMsg.clientTempId)) {
+            return {
+              ...prev,
+              [newMsg.conversationId]: list.map((m) => (m.id === newMsg.clientTempId ? newMsg : m)),
+            };
+          }
+
+          // Fallback matching for pending optimistic message from the same sender
+          const pendingIdx = list.findIndex(
+            (m) =>
+              (m.id.startsWith('temp_') || m.id.startsWith('msg_')) &&
+              m.senderId === newMsg.senderId &&
+              m.content === newMsg.content &&
+              Math.abs(new Date(m.createdAt).getTime() - new Date(newMsg.createdAt).getTime()) < 15000
+          );
+          if (pendingIdx !== -1) {
+            const updated = [...list];
+            updated[pendingIdx] = newMsg;
+            return {
+              ...prev,
+              [newMsg.conversationId]: updated,
+            };
+          }
+
           return {
             ...prev,
             [newMsg.conversationId]: [...list, newMsg],
@@ -262,9 +288,10 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
   ) => {
     if (!activeId) return;
 
-    const tempId = `msg_${Date.now()}`;
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const optimisticMessage: Message = {
       id: tempId,
+      clientTempId: tempId,
       conversationId: activeId,
       senderId: ownerUser.id,
       type,
@@ -314,17 +341,26 @@ export const OwnerShell: React.FC<OwnerShellProps> = ({
             content: content.trim(),
             attachments: optimisticMessage.attachments,
             replyToId: replyTo?.id,
+            clientTempId: tempId,
           }),
         });
 
         if (res.ok) {
           const data = await res.json();
-          setMessages((prev) => ({
-            ...prev,
-            [activeId]: prev[activeId]?.map((m) =>
-              m.id === tempId ? data.message : m
-            ) || [],
-          }));
+          setMessages((prev) => {
+            const list = prev[activeId] || [];
+            // If already added by realtime socket
+            if (list.some((m) => m.id === data.message.id)) {
+              return {
+                ...prev,
+                [activeId]: list.filter((m) => m.id !== tempId),
+              };
+            }
+            return {
+              ...prev,
+              [activeId]: list.map((m) => (m.id === tempId ? data.message : m)),
+            };
+          });
         }
       } catch (err) {
         console.warn('Message send failed:', err);

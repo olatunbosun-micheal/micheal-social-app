@@ -112,6 +112,26 @@ export const GuestShell: React.FC<GuestShellProps> = ({
       realtimeClient.on('message.created', (newMsg: Message) => {
         setMessages((prev) => {
           if (prev.some((m) => m.id === newMsg.id)) return prev;
+
+          // If this is an optimistic message matching clientTempId:
+          if (newMsg.clientTempId && prev.some((m) => m.id === newMsg.clientTempId)) {
+            return prev.map((m) => (m.id === newMsg.clientTempId ? newMsg : m));
+          }
+
+          // Fallback matching for pending optimistic message from the same sender
+          const pendingIdx = prev.findIndex(
+            (m) =>
+              (m.id.startsWith('temp_') || m.id.startsWith('msg_')) &&
+              m.senderId === newMsg.senderId &&
+              m.content === newMsg.content &&
+              Math.abs(new Date(m.createdAt).getTime() - new Date(newMsg.createdAt).getTime()) < 15000
+          );
+          if (pendingIdx !== -1) {
+            const updated = [...prev];
+            updated[pendingIdx] = newMsg;
+            return updated;
+          }
+
           return [...prev, newMsg];
         });
       });
@@ -182,9 +202,10 @@ export const GuestShell: React.FC<GuestShellProps> = ({
     type: 'text' | 'image' | 'video' | 'file' | 'audio' = 'text',
     fileData?: { url: string; fileName: string; fileSize: number; duration?: number }
   ) => {
-    const tempId = `msg_${Date.now()}`;
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const optimisticMessage: Message = {
       id: tempId,
+      clientTempId: tempId,
       conversationId,
       senderId: currentUser.id,
       type,
@@ -231,6 +252,7 @@ export const GuestShell: React.FC<GuestShellProps> = ({
             content: content.trim(),
             attachments: optimisticMessage.attachments,
             replyToId: replyTo?.id,
+            clientTempId: tempId,
           }),
         });
 
@@ -241,10 +263,13 @@ export const GuestShell: React.FC<GuestShellProps> = ({
 
         if (res.ok) {
           const data = await res.json();
-          // Update temp message with real persisted message
-          setMessages((prev) =>
-            prev.map((m) => (m.id === tempId ? data.message : m))
-          );
+          // Update temp message with real persisted message, avoiding duplicates
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === data.message.id)) {
+              return prev.filter((m) => m.id !== tempId);
+            }
+            return prev.map((m) => (m.id === tempId ? data.message : m));
+          });
         }
       } catch (err) {
         console.warn('Send message failed:', err);

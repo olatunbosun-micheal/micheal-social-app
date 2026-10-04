@@ -110,15 +110,21 @@ class RealtimeClient {
     this.send('call.start', params);
   }
 
-  public acceptCall(params: { targetUserId: string; conversationId: string }) {
+  public acceptCall(params: { targetUserId: string; conversationId: string; isVideo?: boolean }) {
     this.send('call.accept', params);
   }
 
-  public rejectCall(params: { targetUserId: string; conversationId: string; reason?: string }) {
+  public rejectCall(params: { targetUserId: string; conversationId: string; isVideo?: boolean; reason?: string }) {
     this.send('call.reject', params);
   }
 
-  public endCall(params: { targetUserId: string; conversationId: string }) {
+  public endCall(params: {
+    targetUserId: string;
+    conversationId: string;
+    duration?: number;
+    isVideo?: boolean;
+    status?: 'completed' | 'missed' | 'declined' | 'cancelled';
+  }) {
     this.send('call.end', params);
   }
 

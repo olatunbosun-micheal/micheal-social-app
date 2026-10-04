@@ -30,7 +30,13 @@ export interface Reaction {
 }
 
 export type MessageStatus = 'sending' | 'sent' | 'delivered' | 'read';
-export type MessageType = 'text' | 'image' | 'video' | 'audio' | 'file' | 'system';
+export type MessageType = 'text' | 'image' | 'video' | 'audio' | 'file' | 'system' | 'call';
+
+export interface CallLog {
+  callType: 'audio' | 'video';
+  status: 'completed' | 'missed' | 'declined' | 'cancelled';
+  duration: number; // in seconds
+}
 
 export interface ReplyContext {
   id: string;
@@ -48,6 +54,8 @@ export interface Message {
   content: string;
   attachments?: Attachment[];
   replyTo?: ReplyContext;
+  callLog?: CallLog;
+  clientTempId?: string;
   status: MessageStatus;
   reactions: Reaction[];
   isEdited?: boolean;

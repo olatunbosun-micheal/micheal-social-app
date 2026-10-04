@@ -56,6 +56,8 @@ export const CallModal: React.FC<CallModalProps> = ({
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteStreamRef = useRef<MediaStream | null>(null);
+  const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
+  const durationRef = useRef(0);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -78,8 +80,11 @@ export const CallModal: React.FC<CallModalProps> = ({
   useEffect(() => {
     if (callStatus === 'connected') {
       soundFX.stopRingtone();
+      durationRef.current = 0;
+      setDuration(0);
       timerRef.current = window.setInterval(() => {
-        setDuration((prev) => prev + 1);
+        durationRef.current += 1;
+        setDuration(durationRef.current);
       }, 1000);
     } else {
       if (timerRef.current) {
@@ -121,28 +126,63 @@ export const CallModal: React.FC<CallModalProps> = ({
       if (event.candidate) {
         realtimeClient.sendCallSignal({
           targetUserId: session.targetUser.id,
-          signal: { type: 'candidate', candidate: event.candidate },
+          signal: { type: 'candidate', candidate: event.candidate.toJSON ? event.candidate.toJSON() : event.candidate },
         });
       }
     };
 
     // Handle remote media track reception
     pc.ontrack = (event) => {
-      const [remoteStream] = event.streams;
-      remoteStreamRef.current = remoteStream;
-
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = remoteStream;
+      console.log('WebRTC ontrack event received:', event.track.kind);
+      let stream = event.streams && event.streams[0];
+      if (!stream) {
+        if (!remoteStreamRef.current) {
+          remoteStreamRef.current = new MediaStream();
+        }
+        remoteStreamRef.current.addTrack(event.track);
+        stream = remoteStreamRef.current;
+      } else {
+        remoteStreamRef.current = stream;
       }
+
+      // 1. Play audio via dedicated HTMLAudioElement
       if (remoteAudioRef.current) {
-        remoteAudioRef.current.srcObject = remoteStream;
+        remoteAudioRef.current.srcObject = stream;
+        remoteAudioRef.current.volume = 1.0;
+        remoteAudioRef.current.muted = isSpeakerMuted;
+        const playPromise = remoteAudioRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise.catch((err) => {
+            console.warn('Audio autoplay blocked by browser policy, unlocking on click:', err);
+            const unlock = () => {
+              remoteAudioRef.current?.play().catch(() => {});
+              window.removeEventListener('click', unlock);
+              window.removeEventListener('touchstart', unlock);
+            };
+            window.addEventListener('click', unlock);
+            window.addEventListener('touchstart', unlock);
+          });
+        }
       }
 
-      const hasVideo = remoteStream.getVideoTracks().length > 0;
+      // 2. Play video via HTMLVideoElement (muted to prevent feedback & browser autoplay pause)
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = stream;
+        remoteVideoRef.current.muted = true;
+        const vidPromise = remoteVideoRef.current.play();
+        if (vidPromise !== undefined) {
+          vidPromise.catch((err) => {
+            console.warn('Video element play error:', err);
+          });
+        }
+      }
+
+      const hasVideo = stream.getVideoTracks().length > 0;
       setHasRemoteVideo(hasVideo);
     };
 
     pc.onconnectionstatechange = () => {
+      console.log('PeerConnection state:', pc.connectionState);
       if (pc.connectionState === 'connected') {
         setCallStatus('connected');
       } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
@@ -153,7 +193,7 @@ export const CallModal: React.FC<CallModalProps> = ({
     return pc;
   };
 
-  // Request user media stream (mic + optional camera)
+  // Request user media stream (mic with echo-cancellation + optional camera)
   const acquireLocalMedia = async (videoWanted: boolean) => {
     try {
       if (localStreamRef.current) {
@@ -161,8 +201,18 @@ export const CallModal: React.FC<CallModalProps> = ({
       }
 
       const constraints: MediaStreamConstraints = {
-        audio: true,
-        video: videoWanted ? { width: { ideal: 1280 }, height: { ideal: 720 } } : false,
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+        video: videoWanted
+          ? {
+              width: { ideal: 1280, max: 1920 },
+              height: { ideal: 720, max: 1080 },
+              facingMode: 'user',
+            }
+          : false,
       };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -177,15 +227,33 @@ export const CallModal: React.FC<CallModalProps> = ({
       console.warn('Could not acquire media with video, falling back to audio:', err);
       // Fallback to audio-only if video fails (e.g. no camera attached)
       try {
-        const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const audioStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        });
         localStreamRef.current = audioStream;
         setIsVideoEnabled(false);
         return audioStream;
-      } catch (audioErr: unknown) {
+      } catch {
         setMediaError('Microphone or camera permission denied.');
         return null;
       }
     }
+  };
+
+  // Flush queued ICE candidates
+  const drainPendingCandidates = async (pc: RTCPeerConnection) => {
+    for (const cand of pendingCandidatesRef.current) {
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(cand));
+      } catch (err) {
+        console.warn('Queued ICE candidate application failed:', err);
+      }
+    }
+    pendingCandidatesRef.current = [];
   };
 
   // Setup Call: Outgoing or Connected
@@ -194,16 +262,24 @@ export const CallModal: React.FC<CallModalProps> = ({
 
     const setupCall = async () => {
       if (session.direction === 'outgoing' && callStatus === 'calling') {
-        // Outgoing initiator
+        // Outgoing initiator: acquire local media and prepare peer connection
         const stream = await acquireLocalMedia(session.isVideo);
         if (!stream || !isSubscribed) return;
 
         const pc = initPeerConnection();
-        stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+        stream.getTracks().forEach((track) => {
+          const senders = pc.getSenders();
+          if (!senders.some((s) => s.track === track)) {
+            pc.addTrack(track, stream);
+          }
+        });
 
         // Create WebRTC Offer
         try {
-          const offer = await pc.createOffer();
+          const offer = await pc.createOffer({
+            offerToReceiveAudio: true,
+            offerToReceiveVideo: true,
+          });
           await pc.setLocalDescription(offer);
           realtimeClient.sendCallSignal({
             targetUserId: session.targetUser.id,
@@ -224,7 +300,6 @@ export const CallModal: React.FC<CallModalProps> = ({
 
       try {
         if (signal.type === 'offer' && signal.sdp) {
-          // If receiving an offer while connected or answering
           const stream = localStreamRef.current || (await acquireLocalMedia(session.isVideo));
           if (stream) {
             stream.getTracks().forEach((track) => {
@@ -236,6 +311,8 @@ export const CallModal: React.FC<CallModalProps> = ({
           }
 
           await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: signal.sdp }));
+          await drainPendingCandidates(pc);
+
           const answer = await pc.createAnswer();
           await pc.setLocalDescription(answer);
 
@@ -245,10 +322,15 @@ export const CallModal: React.FC<CallModalProps> = ({
           });
         } else if (signal.type === 'answer' && signal.sdp) {
           await pc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: signal.sdp }));
+          await drainPendingCandidates(pc);
           setCallStatus('connected');
         } else if (signal.type === 'candidate' && signal.candidate) {
           try {
-            await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+            if (pc.remoteDescription && pc.remoteDescription.type) {
+              await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+            } else {
+              pendingCandidatesRef.current.push(signal.candidate);
+            }
           } catch (candErr) {
             console.warn('ICE candidate addition failed:', candErr);
           }
@@ -261,23 +343,33 @@ export const CallModal: React.FC<CallModalProps> = ({
     // Listen for call accepted
     const handleCallAccepted = async () => {
       setCallStatus('connected');
-      // If we haven't sent the offer yet, send it
+      soundFX.stopRingtone();
       const pc = initPeerConnection();
+
+      // Ensure local tracks are attached before creating offer if not sent yet
+      const stream = localStreamRef.current || (await acquireLocalMedia(session.isVideo));
+      if (stream) {
+        stream.getTracks().forEach((track) => {
+          const senders = pc.getSenders();
+          if (!senders.some((s) => s.track === track)) {
+            pc.addTrack(track, stream);
+          }
+        });
+      }
+
       if (!pc.localDescription) {
-        const stream = localStreamRef.current || (await acquireLocalMedia(session.isVideo));
-        if (stream) {
-          stream.getTracks().forEach((track) => {
-            const senders = pc.getSenders();
-            if (!senders.some((s) => s.track === track)) {
-              pc.addTrack(track, stream);
-            }
+        try {
+          const offer = await pc.createOffer({
+            offerToReceiveAudio: true,
+            offerToReceiveVideo: true,
           });
-          const offer = await pc.createOffer();
           await pc.setLocalDescription(offer);
           realtimeClient.sendCallSignal({
             targetUserId: session.targetUser.id,
             signal: { type: 'offer', sdp: offer.sdp },
           });
+        } catch (err) {
+          console.error('Call accepted offer creation error:', err);
         }
       }
     };
@@ -286,7 +378,7 @@ export const CallModal: React.FC<CallModalProps> = ({
     const handleCallEnded = () => {
       setCallStatus('ended');
       soundFX.playCallEnd();
-      setTimeout(cleanupAndClose, 1500);
+      setTimeout(cleanupAndClose, 1200);
     };
 
     realtimeClient.on('call.signal', handleSignal);
@@ -320,15 +412,33 @@ export const CallModal: React.FC<CallModalProps> = ({
     onEndCall();
   };
 
-  // End call trigger
+  // End call trigger with duration and status logging
   const handleEndCall = () => {
     soundFX.playCallEnd();
+    const finalDuration = durationRef.current;
+    const finalStatus = finalDuration > 0 ? 'completed' : (session.direction === 'outgoing' ? 'cancelled' : 'missed');
+
     realtimeClient.endCall({
       targetUserId: session.targetUser.id,
       conversationId: session.conversationId,
+      duration: finalDuration,
+      isVideo: session.isVideo,
+      status: finalStatus,
     });
     setCallStatus('ended');
-    setTimeout(cleanupAndClose, 1200);
+    setTimeout(cleanupAndClose, 1000);
+  };
+
+  // Reject call trigger
+  const handleRejectCall = () => {
+    soundFX.playCallEnd();
+    realtimeClient.rejectCall({
+      targetUserId: session.targetUser.id,
+      conversationId: session.conversationId,
+      isVideo: session.isVideo,
+    });
+    setCallStatus('ended');
+    setTimeout(cleanupAndClose, 1000);
   };
 
   // Accept incoming call trigger
@@ -341,13 +451,19 @@ export const CallModal: React.FC<CallModalProps> = ({
     const pc = initPeerConnection();
 
     if (stream) {
-      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+      stream.getTracks().forEach((track) => {
+        const senders = pc.getSenders();
+        if (!senders.some((s) => s.track === track)) {
+          pc.addTrack(track, stream);
+        }
+      });
     }
 
     onAcceptCall(video);
     realtimeClient.acceptCall({
       targetUserId: session.targetUser.id,
       conversationId: session.conversationId,
+      isVideo: video,
     });
   };
 
@@ -695,7 +811,7 @@ export const CallModal: React.FC<CallModalProps> = ({
             }}
           >
             <button
-              onClick={handleEndCall}
+              onClick={handleRejectCall}
               style={{
                 display: 'flex',
                 alignItems: 'center',

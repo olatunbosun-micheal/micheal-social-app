@@ -1,6 +1,18 @@
 import React, { useState } from 'react';
 import type { Message, User } from '../types';
-import { Reply, Heart, MoreVertical, Trash2, Edit3, Download, FileText } from 'lucide-react';
+import {
+  Reply,
+  Heart,
+  MoreVertical,
+  Trash2,
+  Edit3,
+  Download,
+  FileText,
+  PhoneIncoming,
+  PhoneOutgoing,
+  PhoneMissed,
+  Video,
+} from 'lucide-react';
 import { VoicePlayer } from './VoicePlayer';
 import { soundFX } from '../services/soundEffects';
 
@@ -11,6 +23,14 @@ const resolveMediaUrl = (url: string): string => {
   // Relative path from server (e.g. /api/media/files/...)
   const base = import.meta.env.PROD ? '' : (import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://127.0.0.1:4000');
   return `${base}${url}`;
+};
+
+const formatCallDuration = (secs: number) => {
+  if (!secs || secs <= 0) return '0s';
+  const mins = Math.floor(secs / 60);
+  const remainder = secs % 60;
+  if (mins === 0) return `${remainder}s`;
+  return `${mins}m ${remainder > 0 ? remainder + 's' : ''}`;
 };
 
 interface MessageBubbleProps {
@@ -293,8 +313,82 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           return null;
         })}
 
+        {/* Call Log Record Card */}
+        {message.type === 'call' && (
+          <div
+            className="bubble-call-log-card"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              padding: '6px 4px',
+              minWidth: 190,
+            }}
+          >
+            <div
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: '50%',
+                background:
+                  message.callLog?.status === 'missed' || message.callLog?.status === 'declined'
+                    ? 'rgba(239, 68, 68, 0.16)'
+                    : 'rgba(16, 185, 129, 0.16)',
+                color:
+                  message.callLog?.status === 'missed' || message.callLog?.status === 'declined'
+                    ? '#ef4444'
+                    : '#10b981',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              {message.callLog?.callType === 'video' || message.content.toLowerCase().includes('video') ? (
+                <Video size={18} />
+              ) : message.callLog?.status === 'missed' ? (
+                <PhoneMissed size={18} />
+              ) : isOutgoing ? (
+                <PhoneOutgoing size={18} />
+              ) : (
+                <PhoneIncoming size={18} />
+              )}
+            </div>
+
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 600, fontSize: 13.5, color: 'var(--text-primary)' }}>
+                {message.callLog?.callType === 'video' || message.content.toLowerCase().includes('video')
+                  ? 'Video Call'
+                  : 'Voice Call'}
+              </div>
+              <div
+                style={{
+                  fontSize: 12,
+                  marginTop: 2,
+                  fontWeight: 500,
+                  color:
+                    message.callLog?.status === 'missed' || message.callLog?.status === 'declined'
+                      ? '#ef4444'
+                      : 'var(--text-secondary)',
+                }}
+              >
+                {message.callLog?.status === 'missed'
+                  ? isOutgoing
+                    ? 'No answer'
+                    : 'Missed'
+                  : message.callLog?.status === 'declined'
+                  ? 'Declined'
+                  : message.callLog?.duration
+                  ? `${formatCallDuration(message.callLog.duration)}`
+                  : 'Completed'}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Text Content */}
         {message.type !== 'audio' &&
+          message.type !== 'call' &&
           message.content &&
           (!message.attachments ||
             message.attachments.length === 0 ||

@@ -1,6 +1,17 @@
 import React, { useState } from 'react';
 import type { User, Message } from '../types';
-import { X, ShieldAlert, BellOff, Trash2, FileText, Download } from 'lucide-react';
+import {
+  X,
+  ShieldAlert,
+  BellOff,
+  Trash2,
+  FileText,
+  Download,
+  Video,
+  PhoneMissed,
+  PhoneIncoming,
+  PhoneOutgoing,
+} from 'lucide-react';
 
 interface InfoDrawerProps {
   user: User;
@@ -21,12 +32,13 @@ export const InfoDrawer: React.FC<InfoDrawerProps> = ({
   onOpenImage,
   isCurrentUserOwner,
 }) => {
-  const [activeTab, setActiveTab] = useState<'media' | 'docs' | 'voice'>('media');
+  const [activeTab, setActiveTab] = useState<'media' | 'docs' | 'voice' | 'calls'>('media');
 
   // Collect all media from messages
   const mediaItems: string[] = [];
   const docItems: { name: string; size: number }[] = [];
   const voiceItems: { duration: number; date: string }[] = [];
+  const callItems: { isVideo: boolean; status: string; duration: number; date: string; isOutgoing: boolean }[] = [];
 
   messages.forEach((msg) => {
     msg.attachments?.forEach((att) => {
@@ -38,7 +50,24 @@ export const InfoDrawer: React.FC<InfoDrawerProps> = ({
         voiceItems.push({ duration: att.duration || 14, date: msg.createdAt });
       }
     });
+
+    if (msg.type === 'call') {
+      callItems.push({
+        isVideo: msg.callLog?.callType === 'video' || msg.content.toLowerCase().includes('video'),
+        status: msg.callLog?.status || (msg.callLog?.duration ? 'completed' : 'missed'),
+        duration: msg.callLog?.duration || 0,
+        date: msg.createdAt,
+        isOutgoing: msg.senderId !== user.id,
+      });
+    }
   });
+
+  const formatDuration = (secs: number) => {
+    if (!secs || secs <= 0) return '0s';
+    const mins = Math.floor(secs / 60);
+    const rem = secs % 60;
+    return mins > 0 ? `${mins}m ${rem > 0 ? rem + 's' : ''}` : `${rem}s`;
+  };
 
   return (
     <div className="info-drawer">
@@ -81,6 +110,12 @@ export const InfoDrawer: React.FC<InfoDrawerProps> = ({
           onClick={() => setActiveTab('voice')}
         >
           Audio ({voiceItems.length})
+        </button>
+        <button
+          className={`drawer-tab ${activeTab === 'calls' ? 'active' : ''}`}
+          onClick={() => setActiveTab('calls')}
+        >
+          Calls ({callItems.length})
         </button>
       </div>
 
@@ -134,6 +169,88 @@ export const InfoDrawer: React.FC<InfoDrawerProps> = ({
                   <span style={{ fontSize: 13 }}>Voice message ({v.duration}s)</span>
                   <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                     {new Date(v.date).toLocaleDateString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )
+        )}
+
+        {activeTab === 'calls' && (
+          callItems.length === 0 ? (
+            <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px 0', fontSize: 13 }}>
+              No recorded call logs yet
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {callItems.map((c, i) => (
+                <div
+                  key={i}
+                  className="bubble-file-attachment"
+                  style={{
+                    margin: 0,
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '10px 12px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: '50%',
+                        background:
+                          c.status === 'missed' || c.status === 'declined'
+                            ? 'rgba(239, 68, 68, 0.15)'
+                            : 'rgba(16, 185, 129, 0.15)',
+                        color:
+                          c.status === 'missed' || c.status === 'declined'
+                            ? '#ef4444'
+                            : '#10b981',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {c.isVideo ? (
+                        <Video size={15} />
+                      ) : c.status === 'missed' ? (
+                        <PhoneMissed size={15} />
+                      ) : c.isOutgoing ? (
+                        <PhoneOutgoing size={15} />
+                      ) : (
+                        <PhoneIncoming size={15} />
+                      )}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+                        {c.isVideo ? 'Video Call' : 'Voice Call'}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 11.5,
+                          marginTop: 2,
+                          color:
+                            c.status === 'missed' || c.status === 'declined'
+                              ? '#ef4444'
+                              : 'var(--text-secondary)',
+                        }}
+                      >
+                        {c.status === 'missed'
+                          ? c.isOutgoing
+                            ? 'No answer'
+                            : 'Missed'
+                          : c.status === 'declined'
+                          ? 'Declined'
+                          : c.duration > 0
+                          ? `Duration: ${formatDuration(c.duration)}`
+                          : 'Completed'}
+                      </div>
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                    {new Date(c.date).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
               ))}

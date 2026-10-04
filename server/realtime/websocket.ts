@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { db } from '../db/index.js';
 import { JWT_SECRET } from '../middleware/auth.js';
 import { assertConversationAccess } from '../middleware/authorization.js';
+import { chatService } from '../services/chatService.js';
 
 interface AuthenticatedSocket extends WebSocket {
   userId?: string;
@@ -121,7 +122,15 @@ const handleSocketEvent = (ws: AuthenticatedSocket, message: { event: string; da
     event === 'call.end' ||
     event === 'call.signal'
   ) {
-    const callData = data as { targetUserId?: string; conversationId?: string; [key: string]: unknown };
+    const callData = data as {
+      targetUserId?: string;
+      conversationId?: string;
+      duration?: number;
+      isVideo?: boolean;
+      status?: 'completed' | 'missed' | 'declined' | 'cancelled';
+      [key: string]: unknown;
+    };
+
     if (callData.targetUserId) {
       const recipientSockets = userSockets.get(callData.targetUserId);
       if (recipientSockets) {
@@ -137,6 +146,32 @@ const handleSocketEvent = (ws: AuthenticatedSocket, message: { event: string; da
             s.send(messageString);
           }
         });
+      }
+    }
+
+    // Record Call Log into conversation history when call finishes or is rejected
+    if ((event === 'call.end' || event === 'call.reject') && callData.conversationId) {
+      try {
+        const senderUser = db.findUserById(ws.userId);
+        if (senderUser) {
+          const isVideo = !!callData.isVideo;
+          const duration = Math.max(0, Math.floor(Number(callData.duration) || 0));
+          const status = callData.status || (event === 'call.reject' ? 'declined' : duration > 0 ? 'completed' : 'missed');
+          
+          chatService.sendMessage({
+            conversationId: callData.conversationId,
+            sender: senderUser,
+            type: 'call',
+            content: isVideo ? 'Video Call' : 'Voice Call',
+            callLog: {
+              callType: isVideo ? 'video' : 'audio',
+              status,
+              duration,
+            },
+          });
+        }
+      } catch (err) {
+        console.warn('Call log recording failed:', err);
       }
     }
   }
