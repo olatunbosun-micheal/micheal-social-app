@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ArrowRight, Lock, Mail, MessageSquare, Key, ShieldCheck, Moon, Sun, Sparkles, Download, Eye, EyeOff, Send } from 'lucide-react';
 import type { User, ThemeMode } from '../types';
 import { API_BASE } from '../config';
@@ -38,15 +38,9 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePos({ x: e.clientX, y: e.clientY });
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
+
+
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
